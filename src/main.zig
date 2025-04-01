@@ -16,9 +16,12 @@ pub fn main() !void {
     const f = try F.init(alloc);
     defer f.deinit();
 
-    const exp = try f.divPtr(
-        try f.variablePtr("x"),
-        try f.variablePtr("x")
+    const exp = try f.logPtr(
+        try f.constantPtr(std.math.e),
+        try f.powPtr(
+            try f.variablePtr("x"),
+            try f.constantPtr(2)
+        )
     );
     
     const value = try exp.*.d("x", f);

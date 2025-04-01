@@ -24,36 +24,56 @@ pub fn Pow(comptime T: type) type {
             std.debug.print(" )", .{});
         }
 
+        fn powerRuleD(self: Self, factory: Factory(T)) !Expression(T) {
+            const c = self.exponent.*.Const;
+
+            return try factory.mul(&.{
+                self.exponent.*,
+                Factory(T).pow(
+                    try factory.create(self.base.*),
+                    try factory.constantPtr(c.value - 1)
+                )
+            });
+        }
+
+        fn logD(self: Self, var_name: []const u8, factory: Factory(T)) !Expression(T) {
+            const f = self.base.*;
+            const f_prime = try f.d(var_name, factory);
+            const g = self.exponent.*;
+            const g_prime = try g.d(var_name, factory);
+
+            const f_pow_g = Factory(T).pow(
+                try factory.create(f),
+                try factory.create(g)
+            );
+
+            const g_prime_ln_f = try factory.mul(&.{
+                g_prime,
+                try factory.ln(try factory.create(f))
+            });
+
+            const g_f_prime_div_f = try factory.mul(&.{
+                g,
+                Factory(T).div(
+                    try factory.create(f_prime),
+                    try factory.create(f)
+                )
+            });
+
+            return try factory.mul(&.{
+                f_pow_g,
+                try factory.add(&.{
+                    g_prime_ln_f,
+                    g_f_prime_div_f
+                })
+            });
+        }
+
         pub fn d(self: Self, var_name: []const u8, factory: Factory(T)) !Expression(T) {
-            switch (self.exponent.*) {
-                .Const => |c| {
-                    const operands = try factory.allocAll(&.{
-                        self.exponent.*,
-                        Factory(T).pow(
-                            try factory.create(self.base.*),
-                            try factory.constantPtr(c.value - 1)
-                        )
-                    });
-
-                    return .{ .Mul = .{ .operands = operands } };
-                },
-                else => {
-                    const expLogBaseProd = try factory.mulPtr(&.{
-                        self.exponent.*,
-                        Factory(T).log(
-                            try factory.constantPtr(std.math.e),
-                            try factory.create(self.base.*)
-                        )
-                    });
-
-                    const operands = try factory.allocAll(&.{
-                        expLogBaseProd.*,
-                        try expLogBaseProd.d(var_name, factory)
-                    });
-
-                    return .{ .Mul = .{ .operands = operands } };
-                }
-            }
+            return switch (self.exponent.*) {
+                .Const => try self.powerRuleD(factory),
+                else => try self.logD(var_name, factory)
+            };
         }
 
         pub const Factories = struct {

@@ -42,6 +42,11 @@ pub fn Add(comptime T: type) type {
                 const operands_ptr = try factory.allocAll(operands);
                 return try factory.create(.{ .Add = .{ .operands = operands_ptr } });
             }
+
+            pub fn add(factory: Factory(T), operands: []const Expression(T)) !Expression(T) {
+                const operands_ptr = try factory.allocAll(operands);
+                return .{ .Add = .{ .operands = operands_ptr } };
+            }
         };
     };
 }
