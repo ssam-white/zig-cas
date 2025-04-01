@@ -7,6 +7,8 @@ const Mul = @import("expression/mul.zig").Mul;
 const Pow = @import("expression/pow.zig").Pow;
 const Variable = @import("expression/variable.zig").Variable;
 const Log = @import("expression/log.zig").Log;
+const Div = @import("expression/div.zig").Div;
+const Sub = @import("expression/sub.zig").Sub;
 
 pub fn Expression(comptime T: type) type {
     return union(enum) {
@@ -20,16 +22,14 @@ pub fn Expression(comptime T: type) type {
         Mul: Mul(T),
         Pow: Pow(T),
         Log: Log(T),
-
-        const Self = @This();
-        pub const Args = []const struct { []const u8, Self };
+        Div: Div(T),
+        Sub: Sub(T),
         
-        pub fn deinit(self: Self, alloc: std.mem.Allocator) void {
-            switch (self) {
-                inline else => |e| e.deinit(alloc)
-            }
-        }
+        const Self = @This();
 
+        pub const Args = []const struct { []const u8, Self };
+        pub const Tag = std.meta.Tag(Self);
+        
         pub fn eval(self: Self, args: Args) T {
             return switch (self) {
                 inline else => |e| e.eval(args),

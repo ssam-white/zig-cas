@@ -13,24 +13,21 @@ pub fn main() !void {
     defer _ = gpa.deinit();
     const alloc = gpa.allocator();
 
-    const f = F.init(alloc);
+    const f = try F.init(alloc);
+    defer f.deinit();
 
-    const ast = Ast(f32).init(
-        f.alloc,
-        try f.powAlloc(
-            try f.variableAlloc("x"),
-            try f.constantAlloc(2)
-        )
+    const exp = try f.divPtr(
+        try f.variablePtr("x"),
+        try f.variablePtr("x")
     );
-    defer ast.deinit();
     
-    const value = try ast.exp.*.d("x", f);
-    // defer value.Mul.operands[1].Pow.exponent.*.deinit(f.alloc);
-    // defer f.alloc.destroy(value.Mul.operands[1].Pow.exponent);
-    // defer f.alloc.free(value.Mul.operands);
-    
+    const value = try exp.*.d("x", f);
+    std.debug.print("d/dx(", .{});
+    exp.*.print();
+    std.debug.print(") = ", .{});
     value.print();
 
     std.debug.print("\n", .{});
+    // std.debug.print("{d}\n", .{ (try exp.*.d("x", f)).eval(&.{ .{ "x", F.constant(3) } })});
 }
 

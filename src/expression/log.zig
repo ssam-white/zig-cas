@@ -11,13 +11,6 @@ pub fn Log(comptime T: type) type {
 
         const Self = @This();
         
-        pub fn deinit(self: Self, alloc: Allocator) void {
-            self.b.*.deinit(alloc);
-            alloc.destroy(self.b);
-            self.x.*.deinit(alloc);
-            alloc.destroy(self.x);
-        }
-
         pub fn eval(self: Self, args: Expression(T).Args) T {
             const b = self.b.*.eval(args);
             const x = self.x.*.eval(args);
@@ -34,8 +27,39 @@ pub fn Log(comptime T: type) type {
 
 
         pub fn d(self: Self, var_name: []const u8, factory: Factory(T)) !Expression(T) {
-            _ = self; _ = var_name; _ = factory;
-            return .{ .Const = .{ .value = 9999 } };
+            return switch (self.b.*) {
+                .Const => |c|
+                    if (c.value == std.math.e) 
+                        Factory(T).div(
+                            try factory.constantPtr(1),
+                            try factory.create(self.x.*)
+                        )
+                    else
+                        Factory(T).div(
+                            try factory.logEPtr(self.x),
+                            try factory.logEPtr(self.b)
+                        ).d(var_name, factory),
+                else =>
+                    Factory(T).div(
+                        try factory.logEPtr(self.x),
+                        try factory.logEPtr(self.b)
+                    ).d(var_name, factory)
+            };
         }
+
+        pub const Factories = struct {
+            pub fn log(b: *Expression(T), x: *Expression(T)) Expression(T) {
+                return .{ .Log = .{ .b = b, .x = x } };
+            }
+
+            pub fn logPtr(factory: Factory(T), b: *Expression(T), x: *Expression(T)) !*Expression(T) {
+                return try factory.create(.{ .Log = .{ .b = b, .x = x } });
+            }
+
+            pub fn logEPtr(factory: Factory(T), x: *Expression(T)) !*Expression(T) {
+                const e = try factory.constantPtr(std.math.e);
+                return try factory.logPtr(e, x);
+            }
+        };
     };
 }

@@ -9,13 +9,6 @@ pub fn Pow(comptime T: type) type {
 
         const Self = @This();
 
-        pub fn deinit(self: Self, alloc: std.mem.Allocator) void {
-            self.base.*.deinit(alloc);
-            alloc.destroy(self.base);
-            self.exponent.*.deinit(alloc);
-            alloc.destroy(self.exponent);
-        }
-
         pub fn eval(self: Self, args: Expression(T).Args) T {
             return std.math.pow(T,
                 self.base.*.eval(args),
@@ -34,33 +27,43 @@ pub fn Pow(comptime T: type) type {
         pub fn d(self: Self, var_name: []const u8, factory: Factory(T)) !Expression(T) {
             switch (self.exponent.*) {
                 .Const => |c| {
-                    const operands = try factory.alloc.alloc(Expression(T), 2);
-
-                    operands[0] = self.exponent.*;
-                    operands[1] = .{ .Pow = .{
-                        .base = self.base,
-                        .exponent = try factory.constantAlloc(c.value - 1)
-                    } };
+                    const operands = try factory.allocAll(&.{
+                        self.exponent.*,
+                        Factory(T).pow(
+                            try factory.create(self.base.*),
+                            try factory.constantPtr(c.value - 1)
+                        )
+                    });
 
                     return .{ .Mul = .{ .operands = operands } };
                 },
                 else => {
-                    const operands = try factory.alloc.alloc(Expression(T), 2);
-                    const expLogBaseProd = try factory.mulAlloc(&.{
+                    const expLogBaseProd = try factory.mulPtr(&.{
                         self.exponent.*,
-                        .{ .Log = .{
-                            .b = try factory.constantAlloc(std.math.e),
-                            .x = self.base
-                        } }
+                        Factory(T).log(
+                            try factory.constantPtr(std.math.e),
+                            try factory.create(self.base.*)
+                        )
                     });
-                    defer expLogBaseProd.*.deinit(factory.alloc);
 
-                    operands[0] = expLogBaseProd.*;
-                    operands[1] = try expLogBaseProd.d(var_name, factory);
+                    const operands = try factory.allocAll(&.{
+                        expLogBaseProd.*,
+                        try expLogBaseProd.d(var_name, factory)
+                    });
 
                     return .{ .Mul = .{ .operands = operands } };
                 }
             }
         }
+
+        pub const Factories = struct {
+            pub fn pow(base: *Expression(f32), exponent: *Expression(f32)) Expression(f32) {
+                return .{ .Pow = .{ .base = base, .exponent = exponent } };
+            }
+
+            pub fn powPtr(factory: Factory(T), base: *Expression(T), exponent: *Expression(T)) !*Expression(T) {
+                return try factory.create(.{ .Pow = .{ .base = base, .exponent = exponent } });
+            }
+        };
     };
 }

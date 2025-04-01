@@ -8,13 +8,6 @@ pub fn Mul(comptime T: type) type {
 
         const Self = @This();
 
-        pub fn deinit(self: Self, alloc: std.mem.Allocator) void {
-            for (self.operands) |e| {
-                e.deinit(alloc);
-            }
-            alloc.free(self.operands);
-        }
-
         pub fn eval(self: Self, args: Expression(T).Args) T {
             var prod = self.operands[0].eval(args);
             for (self.operands[1..]) |e| {
@@ -36,14 +29,26 @@ pub fn Mul(comptime T: type) type {
         }
 
         pub fn d(self: Self, var_name: []const u8, factory: Factory(T)) !Expression(T) {
-            const operands = try factory.alloc.alloc(Expression(T), self.operands.len);
+            const operands = try factory.alloc(self.operands.len);
             for (operands, 0..) |_, i| {
-                const terms = try factory.alloc.alloc(Expression(T), self.operands.len);
-                @memcpy(terms, operands);
+                const terms = try factory.alloc(self.operands.len);
+                @memcpy(terms, self.operands);
                 terms[i] = try self.operands[i].d(var_name, factory);
                 operands[i] = .{ .Mul = .{ .operands = terms } };
             }
             return .{ .Mul = .{ .operands = operands } };
         }
+
+        pub const Factories = struct {
+            pub fn mulPtr(factory: Factory(T), operands: []const Expression(T)) !*Expression(T) {
+                const operands_ptr = try factory.allocAll(operands);
+                return try factory.create(.{ .Mul = .{ .operands = operands_ptr } });
+            }
+
+            pub fn mul(factory: Factory(T), operands: []const Expression(T)) !Expression(T) {
+                const operands_ptr = try factory.allocAll(operands);
+                return .{ .Mul = .{ .operands = operands_ptr } };
+            }
+        };
     };
 }

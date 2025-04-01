@@ -3,87 +3,56 @@ const Expression = @import("expression.zig").Expression;
 
 pub fn Factory(comptime T: type) type {
     return struct {
-        alloc: std.mem.Allocator,
+        arena: *std.heap.ArenaAllocator,
+        allocator: std.mem.Allocator,
+        parent_alloc: std.mem.Allocator,
 
         const Self = @This();
     
-        pub fn init(alloc: std.mem.Allocator)  Self {
+        pub fn init(parent_alloc: std.mem.Allocator) !Self {
+            const arena = try parent_alloc.create(std.heap.ArenaAllocator);
+            arena.* = std.heap.ArenaAllocator.init(parent_alloc);
+            const allocator = arena.*.allocator();
             return .{
-                .alloc = alloc
+                .arena = arena,
+                .allocator = allocator,
+                .parent_alloc = parent_alloc
             };
         }
 
         pub fn deinit(self: Self) void {
-            _ = self;
+            self.arena.*.deinit();
+            self.parent_alloc.destroy(self.arena);
         }
         
-        pub fn variable(name: []const u8) Expression(T) {
-            return .{ .Variable = .{ .name = name } };
+
+        pub fn create(self: Self, exp: Expression(T)) !*Expression(T) {
+            const exp_ptr = try self.allocator.create(Expression(T));
+            exp_ptr.* = exp;
+            return exp_ptr;
         }
 
-        pub fn variableAlloc(self: Self, name: []const u8) !*Expression(T) {
-            const exp = try self.alloc.create(Expression(T));
-            exp.* = .{ .Variable = .{ .name = name } };
-            return exp;
-        }
-
-        pub fn constant(value: T) Expression(T) {
-            return .{ .Const = .{ .value = value } };
-        }
-
-        pub fn constantAlloc(self: Self, value: T) !*Expression(T) {
-            const exp = try self.alloc.create(Expression(T));
-            exp.* = .{ .Const = .{ .value = value } };
-            return exp;
-        }
-
-        pub fn addAlloc(self: Self, operands: []const Expression(T)) !*Expression(T) {
-            const operands_ptr = try self.alloc.alloc(Expression(T), operands.len);
-            operands_ptr.* = operands;
-            
-            const exp = try self.alloc.create(Expression(T));
-            exp.* = .{ .Add = .{ .operands = operands_ptr } };
-
-            return exp;
-        }
-
-        pub fn add(operands: []const Expression(T)) !Expression(T) {
-            return .{ .Add = .{ .operands = operands } };
-        }
-
-        pub fn mulAlloc(self: Self, operands: []const Expression(T)) !*Expression(T) {
-            const operands_ptr = try self.alloc.alloc(Expression(T), operands.len);
+        pub fn allocAll(self: Self, operands: []const Expression(T)) ![]Expression(T) {
+            const operands_ptr = try self.alloc(operands.len);
             @memcpy(operands_ptr, operands);
-            
-            const exp = try self.alloc.create(Expression(T));
-            exp.* = .{ .Mul = .{ .operands = operands_ptr } };
-
-            return exp;
+            return operands_ptr;
         }
 
-        pub fn pow(base: *Expression(f32), exponent: *Expression(f32)) Expression(f32) {
-            return .{ .Pow = .{ .base = base, .exponent = exponent } };
+        pub fn alloc(self: Self, len: usize) ![]Expression(T) {
+            return try self.allocator.alloc(Expression(T), len);
         }
 
-        pub fn powAlloc(self: Self, base: *Expression(T), exponent: *Expression(T)) !*Expression(T) {
-            const exp = try self.alloc.create(Expression(T));
-            exp.* = .{ .Pow = .{ .base = base, .exponent = exponent } };
-            return exp;
+        fn GetFactories(comptime tag: Expression(T).Tag) type {
+            return std.meta.TagPayload(Expression(T), tag).Factories;
         }
 
-        pub fn negAlloc(self: Self, exp: Expression(T)) !*Expression(T) {
-            return try self.mul(&.{ .{ .Const = .{ .value = -1 } }, exp });
-        }
-
-        pub fn div(num: *Expression(f32), den: *Expression(f32)) Expression(f32) {
-            _ = num; _ = den;
-        }
-
-        pub fn divAlloc(self: Self, num: Expression(f32), den: Expression(f32)) !*Expression(f32) {
-            const base_ptr = try self.alloc.create(Expression(f32));
-            base_ptr.* = den;
-            const p = .{ .Pow = .{ .base = base_ptr, .exponent = try self.constantAlloc(-1) } };
-            return self.mulAlloc(&.{ num, p });
-        }
+        pub usingnamespace GetFactories(.Variable);
+        pub usingnamespace GetFactories(.Const);
+        pub usingnamespace GetFactories(.Add);
+        pub usingnamespace GetFactories(.Mul);
+        pub usingnamespace GetFactories(.Pow);
+        pub usingnamespace GetFactories(.Log);
+        pub usingnamespace GetFactories(.Div);
+        pub usingnamespace GetFactories(.Sub);
     };
 }
