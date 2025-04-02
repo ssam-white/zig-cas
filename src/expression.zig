@@ -13,7 +13,8 @@ const Sub = @import("expression/sub.zig").Sub;
 pub fn Expression(comptime T: type) type {
     return union(enum) {
         const Errors = error {
-            DeriveError
+            DeriveError,
+            RewriteError
         };
 
         Variable: Variable(T),
@@ -46,6 +47,27 @@ pub fn Expression(comptime T: type) type {
             return switch (self) {
                 inline else => |e| e.d(var_name, factory) catch Errors.DeriveError
             };
+        }
+
+        pub fn rewrite(self: Self, factory: Factory(T)) Errors!Expression(T) {
+            return switch (self) {
+                inline else => |e| e.rewrite(factory) catch Errors.RewriteError
+            };
+        }
+
+        pub fn eqlStructure(self: Self, exp: Self) bool {
+            return switch (self) {
+                inline else => |e| e.eqlStructure(exp)
+            };
+        }
+
+        pub fn allEqlStructure(a_ops: []const Self, b_ops: []const Self) bool {
+            if (a_ops.len != b_ops.len) return false;
+            
+            for (1..a_ops.len) |i| {
+                if (!a_ops[i].eqlStructure(b_ops[i])) return false;
+            }
+            return true;
         }
     };
 }

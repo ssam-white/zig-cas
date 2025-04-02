@@ -19,7 +19,7 @@ pub fn Pow(comptime T: type) type {
         pub fn print(self: Self) void {
             std.debug.print("( ", .{});
             self.base.print();
-            std.debug.print(" ^ ", .{});
+            std.debug.print("^", .{});
             self.exponent.print();
             std.debug.print(" )", .{});
         }
@@ -74,6 +74,29 @@ pub fn Pow(comptime T: type) type {
                 .Const => try self.powerRuleD(factory),
                 else => try self.logD(var_name, factory)
             };
+        }
+
+        pub fn rewrite(self: Self, factory: Factory(T)) !Expression(T) {
+            const simple_b = try self.base.*.rewrite(factory);
+            const simple_e = try self.exponent.*.rewrite(factory);
+
+            return if (
+                (simple_b == .Const and simple_b.Const.value == 1) or
+                (simple_b == .Const and simple_b.Const.value == 0) or
+                (simple_e == .Const and simple_e.Const.value == 1)
+            )
+                simple_b
+            else if (simple_e == .Const and simple_e.Const.value == 0)
+                Factory(T).constant(1)
+            else .{ .Pow = self };
+        }
+
+        pub fn eqlStructure(self: Self, exp: Expression(T)) bool {
+            if (exp != .Pow) return false;
+            
+            const eql_base_structure = self.base.*.eqlStructure(exp.Pow.base.*);
+            const eql_exponent_structure = self.exponent.*.eqlStructure(exp.Pow.exponent.*);
+            return eql_base_structure and eql_exponent_structure;
         }
 
         pub const Factories = struct {

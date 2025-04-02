@@ -28,6 +28,14 @@ pub fn Variable(comptime T: type) type {
                 .{ .Const = .{ .value = 0 } };
         }
 
+        pub fn rewrite(self: Self, _: Factory(T)) !Expression(T) {
+            return .{ .Variable = self };
+        }
+
+        pub fn eqlStructure(self: Self, exp: Expression(T)) bool {
+            return exp == .Variable and std.mem.eql(u8, self.name, exp.Variable.name);
+        }
+
         pub const Factories = struct {
             pub fn variable(name: []const u8) Expression(T) {
                 return .{ .Variable = .{ .name = name } };

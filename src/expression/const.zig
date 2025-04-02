@@ -25,6 +25,14 @@ pub fn Const(comptime T: type) type {
         }
 
 
+        pub fn rewrite(self: Self, _: Factory(T)) !Expression(T) {
+            return .{ .Const = self };
+        }
+
+        pub fn eqlStructure(self: Self, exp: Expression(T)) bool {
+            return exp == .Const and self.value == exp.Const.value;
+        }
+
         pub const Factories = struct {
             pub fn constant(value: T) Expression(T) {
                 return .{ .Const = .{ .value = value } };

@@ -38,10 +38,38 @@ pub fn Sub(comptime T: type) type {
             return .{ .Sub = .{ .operands = operands } };
         }
 
+        pub fn rewrite(self: Self, factory: Factory(T)) !Expression(T) {
+            const operands = try factory.alloc(self.operands.len);
+            var num_ops: usize = 0;
+            for (self.operands) |exp| {
+                const simple_exp = try exp.rewrite(factory);
+
+                if (simple_exp == .Const and simple_exp.Const.value == 0) continue;
+
+                operands[num_ops] = simple_exp;
+                num_ops += 1;
+            }
+
+            return switch (num_ops) {
+                0 => Factory(T).constant(0),
+                1 => operands[0],
+                else => try factory.sub(operands[0..num_ops])
+            };
+        }
+
+        pub fn eqlStructure(self: Self, exp: Expression(T)) bool {
+            if (exp == .Sub) return false;
+            return Expression(T).allEqlStructure(self.operands, exp.Add.operands);
+        }
+
         pub const Factories = struct {
             pub fn subPtr(factory: Factory(T), operands: []const Expression(T)) !*Expression(T) {
+                return try factory.create(try factory.sub(operands));
+            }
+
+            pub fn sub(factory: Factory(T), operands: []const Expression(T)) !Expression(T) {
                 const operands_ptr = try factory.allocAll(operands);
-                return try factory.create(.{ .Sub = .{ .operands = operands_ptr } });
+                return .{ .Sub = .{ .operands = operands_ptr } };
             }
         };
     };

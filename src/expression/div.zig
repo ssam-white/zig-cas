@@ -17,7 +17,7 @@ pub fn Div(comptime T: type) type {
         pub fn print(self: Self) void {
             std.debug.print("( ", .{});
             self.num.*.print();
-            std.debug.print(" / ", .{});
+            std.debug.print("/", .{});
             self.den.*.print();
             std.debug.print(" )", .{});
         }
@@ -40,6 +40,30 @@ pub fn Div(comptime T: type) type {
             );
 
             return Factory(T).div(u_prime_v_sub_u_v_prime, v_sqrd);
+        }
+
+        pub fn rewrite(self: Self, factory: Factory(T)) !Expression(T) {
+            const simple_num = try self.num.*.rewrite(factory);
+            const simple_den = try self.den.*.rewrite(factory);
+
+            return if (simple_den == .Const and simple_den.Const.value == 1)
+                self.num.*
+            else if (simple_num == .Const and simple_num.Const.value == 0)
+                Factory(T).constant(0)
+            else
+                Factory(T).div(
+                    try factory.create(simple_num),
+                    try factory.create(simple_den)
+                );
+        }
+        
+        pub fn eqlStructure(self: Self, exp: Expression(T)) bool {
+            if (exp != .Div) return false;
+
+            const num_eql_structure = self.num.*.eqlStructure(exp.Div.num.*);
+            const den_eql_structure = self.den.*.eqlStructure(exp.Div.den.*);
+
+            return num_eql_structure and den_eql_structure;
         }
 
         pub const Factories = struct {

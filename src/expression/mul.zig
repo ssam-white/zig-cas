@@ -39,6 +39,36 @@ pub fn Mul(comptime T: type) type {
             return .{ .Mul = .{ .operands = operands } };
         }
 
+        pub fn rewrite(self: Self, factory: Factory(T)) !Expression(T) {
+            const operands = try factory.alloc(self.operands.len);
+            defer factory.allocator.free(operands);
+            
+            var num_ops: usize = 0;
+            for (self.operands) |exp| {
+                const simple_exp = try exp.rewrite(factory);
+
+                if (simple_exp == .Const and simple_exp.Const.value == 0) {
+                    return Factory(T).constant(0);
+                } else if (simple_exp == .Const and simple_exp.Const.value == 1) {
+                    continue;
+                }
+
+                operands[num_ops] = simple_exp;
+                num_ops += 1;
+            }
+
+            return switch (num_ops) {
+                0 => Factory(T).constant(1),
+                1 => operands[0],
+                else => try factory.mul(operands[0..num_ops])
+            };
+        }
+
+        pub fn eqlStructure(self: Self, exp: Expression(T)) bool {
+            if (exp == .Mul) return false;
+            return Expression(T).allEqlStructure(self.operands, exp.Add.operands);
+        }
+
         pub const Factories = struct {
             pub fn mulPtr(factory: Factory(T), operands: []const Expression(T)) !*Expression(T) {
                 const operands_ptr = try factory.allocAll(operands);
