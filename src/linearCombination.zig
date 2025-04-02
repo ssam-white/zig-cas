@@ -2,28 +2,37 @@ const std = @import("std");
 const Expression = @import("expression.zig").Expression;
 const Factory = @import("factory.zig").Factory;
 
-pub fn LinearCombination(comptime T: type) type {
+pub fn Term(comptime T: type) type {
     return struct {
-        const Term = struct {
-            key: Expression(T),
-            value: T,
+        key: Expression(T),
+        value: T,
 
-            fn toExpression(self: Term, factory: Factory(T)) !Expression(T) {
-                return if (self.value == 1)
-                    self.key
-                else try factory.mul(&.{
-                    Factory(T).constant(self.value),
-                    self.key
-                });
-            }        
-        };
+        const Self = @This();
+        
+        fn toExpression(self: Self, factory: Factory(T)) !Expression(T) {
+            return if (self.value == 0)
+                Factory(T).constant(0)
+            else if (self.value == 1)
+                self.key
+            else try factory.mul(&.{
+                Factory(T).constant(self.value),
+                self.key
+            });
+        }        
+    };
+}
 
-        terms: std.ArrayList(Term),
+pub fn LinearCombination(
+    comptime T: type,
+    comptime Context: type
+) type {
+    return struct {
+        terms: std.ArrayList(Term(T)),
 
         const Self = @This();
 
         pub fn init(alloc: std.mem.Allocator) Self {
-            return .{ .terms = std.ArrayList(Term).init(alloc) };
+            return .{ .terms = std.ArrayList(Term(T)).init(alloc) };
         }
 
         pub fn deinit(self: Self) void {
@@ -47,7 +56,7 @@ pub fn LinearCombination(comptime T: type) type {
             exp: Expression(T)
         ) !void {
             if (self.indexOf(exp)) |i| {
-                self.terms.items[i].value += 1;
+                Context.addToTerm(&self.terms.items[i]);
             } else {
                 try self.terms.append(.{
                     .key = exp,

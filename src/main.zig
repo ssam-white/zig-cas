@@ -16,19 +16,19 @@ pub fn main() !void {
     const f = try F.init(alloc);
     defer f.deinit();
 
-    const exp = try f.addPtr(&.{
+    const a = try f.sub(&.{
         F.variable("x"),
-        F.variable("x"),
-        F.variable("x"),
-        F.variable("y"),
-        F.variable("y"),
-        F.variable("z")
+        F.variable("x")
     });
 
+    const b = try f.add(&.{
+        F.variable("x"),
+        F.variable("x")
+    });
 
-   
-    const r = try exp.*.rewrite(f);
-    r.print();
+    (try a.rewrite(f)).print();
+    std.debug.print("\n", .{});
+    (try b.rewrite(f)).print();
     
     std.debug.print("\n", .{});
 }

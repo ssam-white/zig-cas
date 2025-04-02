@@ -1,7 +1,16 @@
 const std = @import("std");
 const Expression = @import("../expression.zig").Expression;
 const Factory = @import("../factory.zig").Factory;
-const LinearCombination = @import("../linearCombination.zig").LinearCombination;
+const linear_combination = @import("../linearCombination.zig");
+
+fn AddLikeTerms(comptime T: type) type {
+    const Context = struct {
+        pub fn addToTerm(self: *linear_combination.Term(T)) void {
+            self.value += 1;
+        }
+    };
+    return linear_combination.LinearCombination(T, Context);
+}
 
 pub fn Add(comptime T: type) type {
     return struct {
@@ -55,7 +64,7 @@ pub fn Add(comptime T: type) type {
                 num_ops += 1;
             }
 
-            var like_terms = LinearCombination(T).init(factory.allocator);
+            var like_terms = AddLikeTerms(T).init(factory.allocator);
             defer like_terms.deinit();
             
             const collected_ops = try like_terms.collect(operands, factory);
