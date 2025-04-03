@@ -8,6 +8,10 @@ pub fn Div(comptime T: type) type {
         den: *Expression(T),
 
         const Self = @This();
+
+        pub fn initExp(num: *Expression(f32), den: *Expression(f32)) Expression(f32) {
+            return .div(num, den);
+        }
         
         pub fn eval(self: Self, args: Expression(T).Args) T {
             // return std.math.divExact(T, self.num.*.eval(args), self.den.*.eval(args)) catch unreachable;
@@ -39,19 +43,19 @@ pub fn Div(comptime T: type) type {
                 try factory.constantPtr(2)
             );
 
-            return Factory(T).div(u_prime_v_sub_u_v_prime, v_sqrd);
+            return .div(u_prime_v_sub_u_v_prime, v_sqrd);
         }
 
         pub fn rewrite(self: Self, factory: Factory(T)) !Expression(T) {
             const simple_num = try self.num.*.rewrite(factory);
             const simple_den = try self.den.*.rewrite(factory);
 
-            return if (simple_den == .Const and simple_den.Const.value == 1)
+            return if (simple_den.eqlStructure(.constant(1)))
                 self.num.*
-            else if (simple_num == .Const and simple_num.Const.value == 0)
-                Factory(T).constant(0)
+            else if (simple_num.eqlStructure(.constant(0)))
+                .constant(0)
             else
-                Factory(T).div(
+                .div(
                     try factory.create(simple_num),
                     try factory.create(simple_den)
                 );
@@ -67,12 +71,8 @@ pub fn Div(comptime T: type) type {
         }
 
         pub const Factories = struct {
-            pub fn div(num: *Expression(f32), den: *Expression(f32)) Expression(f32) {
-                return .{ .Div = .{ .num = num, .den = den } };
-            }
-
             pub fn divPtr(factory: Factory(T), num: *Expression(f32), den: *Expression(f32)) !*Expression(f32) {
-                return try factory.create(.{ .Div = .{ .num = num, .den = den } });
+                return try factory.create(.div(num, den));
             }
         };
     };

@@ -3,20 +3,15 @@ const Expression = @import("../expression.zig").Expression;
 const Factory = @import("../factory.zig").Factory;
 const linear_combination = @import("../linearCombination.zig");
 
-fn SubLikeTerms(comptime T: type) type {
-    const Context = struct {
-        pub fn addToTerm(term: *linear_combination.Term(T)) void {
-            term.value -= 1;
-        }
-    };
-    return linear_combination.LinearCombination(T, Context);
-}
-
 pub fn Sub(comptime T: type) type {
     return struct {
         operands: []const Expression(T),
 
         const Self = @This();
+
+        pub fn initExp(operands: []const Expression(T)) Expression(T) {
+            return .{ .Sub = .{ .operands = operands } };
+        }
         
         pub fn eval(self: Self, args: Expression(T).Args) T {
             var sum = self.operands[0].eval(args);
@@ -44,8 +39,15 @@ pub fn Sub(comptime T: type) type {
             for (self.operands, 0..) |e, i| {
                 operands[i] = try e.d(var_name, factory);
             }
-            return .{ .Sub = .{ .operands = operands } };
+            return .sub(operands);
         }
+
+
+        const SubLikeTerms = linear_combination.LinearCombination(T, struct {
+            pub fn addToTerm(self: *linear_combination.Term(T)) void {
+                self.value -= 1;
+            }
+        });
 
         pub fn rewrite(self: Self, factory: Factory(T)) !Expression(T) {
             const operands = try factory.alloc(self.operands.len);
@@ -53,19 +55,18 @@ pub fn Sub(comptime T: type) type {
             for (self.operands) |exp| {
                 const simple_exp = try exp.rewrite(factory);
 
-                if (simple_exp == .Const and simple_exp.Const.value == 0) continue;
+                if (simple_exp.eqlStructure(.constant(0))) continue;
 
                 operands[num_ops] = simple_exp;
                 num_ops += 1;
             }
 
-            var like_terms = SubLikeTerms(T).init(factory.allocator);
+            var like_terms = SubLikeTerms.init(factory.allocator);
             defer like_terms.deinit();
-
             const collected_ops = try like_terms.collect(operands, factory);
             
             return switch (collected_ops.len) {
-                0 => Factory(T).constant(0),
+                0 => .constant(0),
                 1 => collected_ops[0],
                 else => try factory.sub(collected_ops)
             };
@@ -73,7 +74,7 @@ pub fn Sub(comptime T: type) type {
 
         pub fn eqlStructure(self: Self, exp: Expression(T)) bool {
             if (exp == .Sub) return false;
-            return Expression(T).allEqlStructure(self.operands, exp.Add.operands);
+            return Expression(T).allEqlStructure(self.operands, exp.Add.operands.items);
         }
 
         pub const Factories = struct {
@@ -83,7 +84,7 @@ pub fn Sub(comptime T: type) type {
 
             pub fn sub(factory: Factory(T), operands: []const Expression(T)) !Expression(T) {
                 const operands_ptr = try factory.allocAll(operands);
-                return .{ .Sub = .{ .operands = operands_ptr } };
+                return .sub(operands_ptr);
             }
         };
     };

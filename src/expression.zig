@@ -30,6 +30,15 @@ pub fn Expression(comptime T: type) type {
 
         pub const Args = []const struct { []const u8, Self };
         pub const Tag = std.meta.Tag(Self);
+
+        pub const variable = Variable(T).initExp;
+        pub const constant = Const(T).initExp;
+        pub const pow = Pow(T).initExp;
+        pub const div = Div(T).initExp;
+        pub const log = Log(T).initExp;
+        pub const add = Add(T).initExp;
+        pub const mul = Mul(T).initExp;
+        pub const sub = Sub(T).initExp;
         
         pub fn eval(self: Self, args: Args) T {
             return switch (self) {

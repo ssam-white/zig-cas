@@ -9,6 +9,10 @@ pub fn Pow(comptime T: type) type {
 
         const Self = @This();
 
+        pub fn initExp(base: *Expression(f32), exponent: *Expression(f32)) Expression(f32) {
+            return .pow(base, exponent);
+        }
+
         pub fn eval(self: Self, args: Expression(T).Args) T {
             return std.math.pow(T,
                 self.base.*.eval(args),
@@ -29,7 +33,7 @@ pub fn Pow(comptime T: type) type {
 
             return try factory.mul(&.{
                 self.exponent.*,
-                Factory(T).pow(
+                .pow(
                     try factory.create(self.base.*),
                     try factory.constantPtr(c.value - 1)
                 )
@@ -42,7 +46,7 @@ pub fn Pow(comptime T: type) type {
             const g = self.exponent.*;
             const g_prime = try g.d(var_name, factory);
 
-            const f_pow_g = Factory(T).pow(
+            const f_pow_g = .pow(
                 try factory.create(f),
                 try factory.create(g)
             );
@@ -54,7 +58,7 @@ pub fn Pow(comptime T: type) type {
 
             const g_f_prime_div_f = try factory.mul(&.{
                 g,
-                Factory(T).div(
+                .div(
                     try factory.create(f_prime),
                     try factory.create(f)
                 )
@@ -81,13 +85,13 @@ pub fn Pow(comptime T: type) type {
             const simple_e = try self.exponent.*.rewrite(factory);
 
             return if (
-                (simple_b == .Const and simple_b.Const.value == 1) or
-                (simple_b == .Const and simple_b.Const.value == 0) or
-                (simple_e == .Const and simple_e.Const.value == 1)
+                simple_b.eqlStructure(.constant(1)) or
+                simple_b.eqlStructure(.constant(0)) or
+                simple_e.eqlStructure(.constant(1))
             )
                 simple_b
-            else if (simple_e == .Const and simple_e.Const.value == 0)
-                Factory(T).constant(1)
+            else if (simple_e.eqlStructure(.constant(0)))
+                .constant(1)
             else .{ .Pow = self };
         }
 
@@ -100,12 +104,8 @@ pub fn Pow(comptime T: type) type {
         }
 
         pub const Factories = struct {
-            pub fn pow(base: *Expression(f32), exponent: *Expression(f32)) Expression(f32) {
-                return .{ .Pow = .{ .base = base, .exponent = exponent } };
-            }
-
             pub fn powPtr(factory: Factory(T), base: *Expression(T), exponent: *Expression(T)) !*Expression(T) {
-                return try factory.create(.{ .Pow = .{ .base = base, .exponent = exponent } });
+                return try factory.powPtr(base, exponent);
             }
         };
     };

@@ -8,6 +8,11 @@ pub fn Variable(comptime T: type) type {
 
         const Self = @This();
     
+
+        pub fn initExp(name: []const u8) Expression(T) {
+            return .{ .Variable = .{ .name = name } };
+        }
+
         pub fn eval(self: Self, args: Expression(T).Args) T {
             for (args) |arg| {
                 if (std.mem.eql(u8, arg[0], self.name)) {
@@ -37,12 +42,8 @@ pub fn Variable(comptime T: type) type {
         }
 
         pub const Factories = struct {
-            pub fn variable(name: []const u8) Expression(T) {
-                return .{ .Variable = .{ .name = name } };
-            }
-
             pub fn variablePtr(factory: Factory(T), name: []const u8) !*Expression(T) {
-                return try factory.create(.{ .Variable = .{ .name = name } });
+                return try factory.variablePtr(name);
             }
         };
     };

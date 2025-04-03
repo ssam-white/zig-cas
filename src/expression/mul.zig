@@ -8,6 +8,10 @@ pub fn Mul(comptime T: type) type {
 
         const Self = @This();
 
+        pub fn initExp(operands: []const Expression(T)) Expression(T) {
+            return .{ .Mul = .{ .operands = operands } };
+        }
+
         pub fn eval(self: Self, args: Expression(T).Args) T {
             var prod = self.operands[0].eval(args);
             for (self.operands[1..]) |e| {
@@ -34,9 +38,9 @@ pub fn Mul(comptime T: type) type {
                 const terms = try factory.alloc(self.operands.len);
                 @memcpy(terms, self.operands);
                 terms[i] = try self.operands[i].d(var_name, factory);
-                operands[i] = .{ .Mul = .{ .operands = terms } };
+                operands[i] = .mul(terms);
             }
-            return .{ .Mul = .{ .operands = operands } };
+            return .mul(operands);
         }
 
         pub fn rewrite(self: Self, factory: Factory(T)) !Expression(T) {
@@ -47,9 +51,9 @@ pub fn Mul(comptime T: type) type {
             for (self.operands) |exp| {
                 const simple_exp = try exp.rewrite(factory);
 
-                if (simple_exp == .Const and simple_exp.Const.value == 0) {
-                    return Factory(T).constant(0);
-                } else if (simple_exp == .Const and simple_exp.Const.value == 1) {
+                if (simple_exp.eqlStructure(.constant(0))) {
+                    return .constant(0);
+                } else if (simple_exp.eqlStructure(.constant(1))) {
                     continue;
                 }
 
@@ -58,7 +62,7 @@ pub fn Mul(comptime T: type) type {
             }
 
             return switch (num_ops) {
-                0 => Factory(T).constant(1),
+                0 => .constant(1),
                 1 => operands[0],
                 else => try factory.mul(operands[0..num_ops])
             };
@@ -66,18 +70,18 @@ pub fn Mul(comptime T: type) type {
 
         pub fn eqlStructure(self: Self, exp: Expression(T)) bool {
             if (exp == .Mul) return false;
-            return Expression(T).allEqlStructure(self.operands, exp.Add.operands);
+            return Expression(T).allEqlStructure(self.operands, exp.Add.operands.items);
         }
 
         pub const Factories = struct {
             pub fn mulPtr(factory: Factory(T), operands: []const Expression(T)) !*Expression(T) {
                 const operands_ptr = try factory.allocAll(operands);
-                return try factory.create(.{ .Mul = .{ .operands = operands_ptr } });
+                return try factory.mulPtr(operands_ptr);
             }
 
             pub fn mul(factory: Factory(T), operands: []const Expression(T)) !Expression(T) {
                 const operands_ptr = try factory.allocAll(operands);
-                return .{ .Mul = .{ .operands = operands_ptr } };
+                return .mul(operands_ptr);
             }
         };
     };

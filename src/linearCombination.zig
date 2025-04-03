@@ -11,11 +11,11 @@ pub fn Term(comptime T: type) type {
         
         fn toExpression(self: Self, factory: Factory(T)) !Expression(T) {
             return if (self.value == 0)
-                Factory(T).constant(0)
+                .constant(0)
             else if (self.value == 1)
                 self.key
             else try factory.mul(&.{
-                Factory(T).constant(self.value),
+                .constant(self.value),
                 self.key
             });
         }        
@@ -47,7 +47,6 @@ pub fn LinearCombination(
             for (operands) |exp| {
                 try self.insert(exp);
             }
-            
             return try self.toSlice(factory);
         }
 

@@ -8,6 +8,10 @@ pub fn Const(comptime T: type) type {
 
         const Self = @This();
 
+            pub fn initExp(value: T) Expression(T) {
+                return .{ .Const = .{ .value = value } };
+            }
+
         pub fn eval(self: Self, _: Expression(T).Args) T {
             return self.value;
         }
@@ -34,12 +38,8 @@ pub fn Const(comptime T: type) type {
         }
 
         pub const Factories = struct {
-            pub fn constant(value: T) Expression(T) {
-                return .{ .Const = .{ .value = value } };
-            }
-
             pub fn constantPtr(factory: Factory(T), value: T) !*Expression(T) {
-                return try factory.create(.{ .Const = .{ .value = value } });
+                return try factory.constPtr(value);
             }
         };
     };

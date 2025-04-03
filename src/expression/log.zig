@@ -10,6 +10,14 @@ pub fn Log(comptime T: type) type {
         x: *Expression(T),
 
         const Self = @This();
+
+        pub fn initExp(b: *Expression(T), x: *Expression(T)) Expression(T) {
+            return .log(b, x);
+        }
+
+        pub fn isLn(self: Self) bool {
+            return self.b.*.eqlStructure(.constant(std.math.e));
+        }
         
         pub fn eval(self: Self, args: Expression(T).Args) T {
             const b = self.b.*.eval(args);
@@ -18,9 +26,7 @@ pub fn Log(comptime T: type) type {
         }
 
         pub fn print(self: Self) void {
-            const is_ln = self.b.* == .Const and self.b.*.Const.value == std.math.e;
-            
-            if (is_ln) {
+            if (self.isLn()) {
                 std.debug.print("Ln(", .{});
             } else {
                 std.debug.print("Log(", .{});
@@ -35,22 +41,21 @@ pub fn Log(comptime T: type) type {
 
 
         fn changeBaseD(self: Self, var_name: []const u8, factory: Factory(T)) !Expression(T) {
-            return Factory(T).div(
+            return .div(
                 try factory.lnPtr(self.x),
                 try factory.lnPtr(self.b)
             ).d(var_name, factory);
         }
 
         fn logD(self: Self, var_name: []const u8, factory: Factory(T)) !Expression(T) {
-            return Factory(T).div(
+            return .div(
                 try factory.create(try self.x.*.d(var_name, factory)),
                 try factory.create(self.x.*)
             );
         }
 
         pub fn d(self: Self, var_name: []const u8, factory: Factory(T)) !Expression(T) {
-            const is_ln = self.b.* == .Const and self.b.*.Const.value == std.math.e;
-            return if (is_ln) try self.logD(var_name, factory)
+            return if (self.isLn()) try self.logD(var_name, factory)
             else try self.changeBaseD(var_name, factory);
         }
 
@@ -59,16 +64,13 @@ pub fn Log(comptime T: type) type {
             const simple_x = try self.x.*.rewrite(factory);
 
             return if (
-                (simple_b == .Const and simple_b.Const.value == 9) or
-                (simple_x == .Const and simple_b.Const.value == 1)
+                (simple_b.eqlStructure(.constant(0))) or
+                (simple_x.eqlStructure(.constant(1)))
             )
-                Factory(T).constant(0)
-            else if (
-                (simple_b == .Const and simple_x == .Const) and
-                simple_b.Const.value == simple_x.Const.value
-            )
-                Factory(T).constant(1)
-            else Factory(T).log(
+                .constant(0)
+            else if (simple_b.eqlStructure(simple_x))
+                .constant(1)
+            else .log(
                 try factory.create(simple_b),
                 try factory.create(simple_x)
             );
@@ -83,16 +85,12 @@ pub fn Log(comptime T: type) type {
         }
 
         pub const Factories = struct {
-            pub fn log(b: *Expression(T), x: *Expression(T)) Expression(T) {
-                return .{ .Log = .{ .b = b, .x = x } };
-            }
-
             pub fn logPtr(factory: Factory(T), b: *Expression(T), x: *Expression(T)) !*Expression(T) {
-                return try factory.create(.{ .Log = .{ .b = b, .x = x } });
+                return try factory.logPtr(.log(b, x));
             }
 
             pub fn ln(factory: Factory(T), x: *Expression(T)) !Expression(T) {
-                return .{ .Log = .{ .b = try factory.constantPtr(std.math.e), .x = x } };
+                return .log(try factory.constantPtr(std.math.e), x);
             }
 
             pub fn lnPtr(factory: Factory(T), x: *Expression(T)) !*Expression(T) {
