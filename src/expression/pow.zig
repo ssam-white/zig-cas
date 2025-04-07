@@ -9,7 +9,7 @@ pub fn Pow(comptime T: type) type {
 
         const Self = @This();
 
-        pub fn initExp(base: *Expression(f32), exponent: *Expression(f32)) Expression(f32) {
+        pub fn initExp(base: *Expression(T), exponent: *Expression(T)) Expression(T) {
             return .{ .Pow = .{ .base = base, .exponent = exponent } };
         }
 
@@ -109,4 +109,43 @@ pub fn Pow(comptime T: type) type {
             }
         };
     };
+}
+
+test "power rule of differentiation" {
+    const f = try Factory(f32).init(std.testing.allocator);
+    defer f.deinit();
+
+    const exp = Expression(f32).pow(
+        try f.variablePtr("x"),
+        try f.constantPtr(2)
+    );
+
+    const d_exp = try exp.d("x", f);
+
+    const expected = try f.mul(&.{
+        .constant(2),
+        .pow(
+            try f.variablePtr("x"),
+            try f.constantPtr(1)
+        )
+    });
+
+    const is_eql = d_exp.eqlStructure(expected);
+
+    try std.testing.expect(is_eql);
+}
+
+test "x^0 == 1" {
+    const f = try Factory(f32).init(std.testing.allocator);
+    defer f.deinit();
+
+    const exp = Expression(f32).pow(
+        try f.variablePtr("x"),
+        try f.constantPtr(0),
+    );
+    const r_exp = exp.rewrite(f);
+
+    const expected = Expression(f32).constant(1);
+
+    try std.testing.expectEqual(r_exp, expected);
 }

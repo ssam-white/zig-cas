@@ -43,7 +43,7 @@ pub fn Variable(comptime T: type) type {
 
         pub const Factories = struct {
             pub fn variablePtr(factory: Factory(T), name: []const u8) !*Expression(T) {
-                return try factory.variablePtr(name);
+                return try factory.create(.variable(name));
             }
         };
     };
