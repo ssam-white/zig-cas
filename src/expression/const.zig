@@ -39,7 +39,7 @@ pub fn Const(comptime T: type) type {
 
         pub const Factories = struct {
             pub fn constantPtr(factory: Factory(T), value: T) !*Expression(T) {
-                return try factory.constPtr(value);
+                return try factory.create(.constant(value));
             }
         };
     };

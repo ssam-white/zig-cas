@@ -1,14 +1,37 @@
 const std = @import("std");
 const Expression = @import("../expression.zig").Expression;
 const Factory = @import("../factory.zig").Factory;
+const Operands = @import("operands.zig").Operands;
+const linear_combination = @import("../linearCombination.zig");
+const LinearCombination = linear_combination.LinearCombination;
 
 pub fn Mul(comptime T: type) type {
     return struct {
-        operands: []const Expression(T),
+        operands: MulOperands,
 
         const Self = @This();
 
-        pub fn initExp(operands: []const Expression(T)) Expression(T) {
+        const MulOperands = Operands(T, struct {
+            pub fn filters(exp: Expression(T)) bool {
+                return exp.eqlStructure(.constant(1));
+            }
+
+            pub const LinearCombinator = LinearCombination(T, struct {
+                pub fn addToTerm(s: *linear_combination.Term(T)) void {
+                    s.value += 1;
+                }
+
+                pub fn termToExpression(term: linear_combination.Term(T), factory: Factory(T)) !Expression(T) {
+                    return .pow(
+                        try factory.create(term.key),
+                        try factory.constantPtr(term.value)
+                    );
+                }
+
+            });
+        });
+
+        pub fn initExp(operands: MulOperands) Expression(T) {
             return .{ .Mul = .{ .operands = operands } };
         }
 
@@ -21,56 +44,28 @@ pub fn Mul(comptime T: type) type {
         }
 
         pub fn print(self: Self) void {
-            std.debug.print("( ", .{});
-            defer std.debug.print(" )", .{});
-            
-            if (self.operands.len == 0) return;
-            self.operands[0].print();
-            for (self.operands[1..]) |e| {
-                std.debug.print(" * ", .{});
-                e.print();
-            }
+            self.operands.print("*");
         }
 
         pub fn d(self: Self, var_name: []const u8, factory: Factory(T)) !Expression(T) {
-            const operands = try factory.alloc(self.operands.len);
-            for (operands, 0..) |_, i| {
-                const terms = try factory.alloc(self.operands.len);
-                @memcpy(terms, self.operands);
-                terms[i] = try self.operands[i].d(var_name, factory);
-                operands[i] = .mul(terms);
-            }
-            return .mul(operands);
+            const d_ops = try self.operands.deriveTerms(var_name, factory);
+            return .mul(d_ops);
         }
 
         pub fn rewrite(self: Self, factory: Factory(T)) !Expression(T) {
-            const operands = try factory.alloc(self.operands.len);
-            defer factory.allocator.free(operands);
-            
-            var num_ops: usize = 0;
-            for (self.operands) |exp| {
-                const simple_exp = try exp.rewrite(factory);
+            const filtered = try self.operands.filter(factory);
+            const collected_ops = try filtered.collectLikeTerms(factory);
 
-                if (simple_exp.eqlStructure(.constant(0))) {
-                    return .constant(0);
-                } else if (simple_exp.eqlStructure(.constant(1))) {
-                    continue;
-                }
-
-                operands[num_ops] = simple_exp;
-                num_ops += 1;
-            }
-
-            return switch (num_ops) {
-                0 => .constant(1),
-                1 => operands[0],
-                else => try factory.mul(operands[0..num_ops])
+            return switch (collected_ops.items.len) {
+                0 => .constant(0),
+                1 => collected_ops.items[0],
+                else => try factory.mul(collected_ops.items)
             };
         }
 
         pub fn eqlStructure(self: Self, exp: Expression(T)) bool {
             if (exp == .Mul) return false;
-            return Expression(T).allEqlStructure(self.operands, exp.Add.operands.items);
+            return Expression(T).allEqlStructure(self.operands.items, exp.Mul.operands.items);
         }
 
         pub const Factories = struct {
@@ -81,7 +76,7 @@ pub fn Mul(comptime T: type) type {
 
             pub fn mul(factory: Factory(T), operands: []const Expression(T)) !Expression(T) {
                 const operands_ptr = try factory.allocAll(operands);
-                return .mul(operands_ptr);
+                return .mul(.init(operands_ptr));
             }
         };
     };

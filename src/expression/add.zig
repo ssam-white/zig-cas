@@ -2,6 +2,7 @@ const std = @import("std");
 const Expression = @import("../expression.zig").Expression;
 const Factory = @import("../factory.zig").Factory;
 const linear_combination = @import("../linearCombination.zig");
+const LinearCombination = linear_combination.LinearCombination;
 const Operands = @import("operands.zig").Operands;
 
 pub fn Add(comptime T: type) type {
@@ -10,18 +11,24 @@ pub fn Add(comptime T: type) type {
 
         const Self = @This();
 
-        const OperandsContext = struct {
+        const AddOperands = Operands(T, struct {
             pub fn filters(exp: Expression(T)) bool {
                 return exp.eqlStructure(.constant(0));
             }
 
-            pub const LinearCombinator = struct {
+            pub const LinearCombinator = LinearCombination(T, struct {
                 pub fn addToTerm(s: *linear_combination.Term(T)) void {
                     s.value += 1;
                 }
-            };
-        };
-        const AddOperands = Operands(T, OperandsContext);
+
+                pub fn termToExpression(term: linear_combination.Term(T), factory: Factory(T)) !Expression(T) {
+                    return try factory.mul(&.{
+                        .constant(term.value),
+                        term.key
+                    });
+                }
+            });
+        });
 
         pub fn initExp(operands: AddOperands) Expression(T) {
             return .{ .Add = .{ .operands = operands } };

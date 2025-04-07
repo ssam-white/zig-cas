@@ -18,7 +18,6 @@ pub fn Operands(
 
         pub fn filter(self: Self, factory: Factory(T)) !Self {
             const operands = try factory.alloc(self.items.len);
-            defer factory.allocator.free(self.items);
             var num_ops: usize = 0;
             for (self.items) |exp| {
                 const simple_exp = try exp.rewrite(factory);
@@ -51,9 +50,11 @@ pub fn Operands(
         }
 
         pub fn collectLikeTerms(self: Self, factory: Factory(T)) !Self {
-            var like_terms = LinearCombination(T, Context.LinearCombinator).init(factory.allocator);
+            var like_terms = Context.LinearCombinator.init(factory.allocator);
             defer like_terms.deinit();
             const collected = try like_terms.collect(self.items, factory);
+            std.debug.print("made it\n", .{});
+
             return .init(collected);
         }
     };

@@ -10,7 +10,7 @@ pub fn Pow(comptime T: type) type {
         const Self = @This();
 
         pub fn initExp(base: *Expression(f32), exponent: *Expression(f32)) Expression(f32) {
-            return .pow(base, exponent);
+            return .{ .Pow = .{ .base = base, .exponent = exponent } };
         }
 
         pub fn eval(self: Self, args: Expression(T).Args) T {
@@ -105,7 +105,7 @@ pub fn Pow(comptime T: type) type {
 
         pub const Factories = struct {
             pub fn powPtr(factory: Factory(T), base: *Expression(T), exponent: *Expression(T)) !*Expression(T) {
-                return try factory.powPtr(base, exponent);
+                return try factory.create(.pow(base, exponent));
             }
         };
     };

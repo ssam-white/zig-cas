@@ -32,7 +32,7 @@ pub fn LinearCombination(
         const Self = @This();
 
         pub fn init(alloc: std.mem.Allocator) Self {
-            return .{ .terms = std.ArrayList(Term(T)).init(alloc) };
+            return .{ .terms = .init(alloc) };
         }
 
         pub fn deinit(self: Self) void {
@@ -70,7 +70,13 @@ pub fn LinearCombination(
         ) ![]Expression(T) {
             const collected = try factory.alloc(self.terms.items.len);
             for (self.terms.items, 0..) |term, i| {
-                collected[i] = try term.toExpression(factory);
+                collected[i] =
+                    if (term.value == 0)
+                        .constant(0)
+                    else if (term.value == 0)
+                        term.key
+                    else
+                        try Context.termToExpression(term, factory);
             }
             return collected;
         }
