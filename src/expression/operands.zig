@@ -25,7 +25,7 @@ pub fn Operands(
                 operands[num_ops] = simple_exp;
                 num_ops += 1;
             }
-            return .init(operands);
+            return .init(operands[0..num_ops]);
         }
 
         pub fn print(self: Self, operator: []const u8) void {
@@ -42,7 +42,7 @@ pub fn Operands(
         }
 
         pub fn deriveTerms(self: Self, var_name: []const u8, factory: Factory(T)) !Self {
-            const d_ops = try factory.alloc(self.operands.len);
+            const d_ops = try factory.alloc(self.items.len);
             for (self.items, 0..) |exp, i| {
                 d_ops[i] = try exp.d(var_name, factory);
             }
@@ -53,8 +53,6 @@ pub fn Operands(
             var like_terms = Context.LinearCombinator.init(factory.allocator);
             defer like_terms.deinit();
             const collected = try like_terms.collect(self.items, factory);
-            std.debug.print("made it\n", .{});
-
             return .init(collected);
         }
     };

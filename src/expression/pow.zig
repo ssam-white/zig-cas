@@ -46,7 +46,7 @@ pub fn Pow(comptime T: type) type {
             const g = self.exponent.*;
             const g_prime = try g.d(var_name, factory);
 
-            const f_pow_g = .pow(
+            const f_pow_g = Expression(T).pow(
                 try factory.create(f),
                 try factory.create(g)
             );

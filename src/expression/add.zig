@@ -47,8 +47,8 @@ pub fn Add(comptime T: type) type {
         }
 
         pub fn d(self: Self, var_name: []const u8, factory: Factory(T)) !Expression(T) {
-            const d_ops = self.operands.deriveTerms(var_name, factory);
-            return .add(d_ops.items);
+            const d_ops = try self.operands.deriveTerms(var_name, factory);
+            return .add(.init(d_ops.items));
         }
 
         pub fn rewrite(self: Self, factory: Factory(T)) !Expression(T) {

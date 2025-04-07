@@ -41,7 +41,7 @@ pub fn Log(comptime T: type) type {
 
 
         fn changeBaseD(self: Self, var_name: []const u8, factory: Factory(T)) !Expression(T) {
-            return .div(
+            return Expression(T).div(
                 try factory.lnPtr(self.x),
                 try factory.lnPtr(self.b)
             ).d(var_name, factory);
@@ -86,7 +86,7 @@ pub fn Log(comptime T: type) type {
 
         pub const Factories = struct {
             pub fn logPtr(factory: Factory(T), b: *Expression(T), x: *Expression(T)) !*Expression(T) {
-                return try factory.logPtr(.log(b, x));
+                return try factory.create(.log(b, x));
             }
 
             pub fn ln(factory: Factory(T), x: *Expression(T)) !Expression(T) {

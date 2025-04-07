@@ -17,10 +17,12 @@ pub fn main() !void {
     const b = try f.mul(&.{
         .variable("x"),
         .variable("x"),
-        .variable("x"),
     });
 
-    const br = try b.rewrite(f);
+    const bd = try b.d("x", f);
+    bd.print();
+    std.debug.print("\n", .{});
+    const br = try bd.rewrite(f);
     b.print();
     std.debug.print(" = ", .{});
     br.print();

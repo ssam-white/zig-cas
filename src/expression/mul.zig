@@ -48,8 +48,13 @@ pub fn Mul(comptime T: type) type {
         }
 
         pub fn d(self: Self, var_name: []const u8, factory: Factory(T)) !Expression(T) {
-            const d_ops = try self.operands.deriveTerms(var_name, factory);
-            return .mul(d_ops);
+            const operands = try factory.alloc(self.operands.items.len);
+            for (operands, 0..) |_, i| {
+                const terms = try factory.allocAll(self.operands.items);
+                terms[i] = try self.operands.items[i].d(var_name, factory);
+                operands[i] = .mul(.init(terms));
+            }
+            return .add(.init(operands));
         }
 
         pub fn rewrite(self: Self, factory: Factory(T)) !Expression(T) {
@@ -64,7 +69,7 @@ pub fn Mul(comptime T: type) type {
         }
 
         pub fn eqlStructure(self: Self, exp: Expression(T)) bool {
-            if (exp == .Mul) return false;
+            if (exp != .Mul) return false;
             return Expression(T).allEqlStructure(self.operands.items, exp.Mul.operands.items);
         }
 

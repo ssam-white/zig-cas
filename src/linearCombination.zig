@@ -73,7 +73,7 @@ pub fn LinearCombination(
                 collected[i] =
                     if (term.value == 0)
                         .constant(0)
-                    else if (term.value == 0)
+                    else if (term.value == 1)
                         term.key
                     else
                         try Context.termToExpression(term, factory);
