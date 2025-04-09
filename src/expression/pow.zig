@@ -29,8 +29,9 @@ pub fn Pow(comptime T: type) type {
         }
 
         fn powerRuleD(self: Self, factory: Factory(T)) !Expression(T) {
-            const c = self.exponent.*.Const;
+            std.debug.assert(self.exponent.* == .Const);            
 
+            const c = self.exponent.*.Const;
             return try factory.mul(&.{
                 self.exponent.*,
                 .pow(
@@ -41,35 +42,15 @@ pub fn Pow(comptime T: type) type {
         }
 
         fn logD(self: Self, var_name: []const u8, factory: Factory(T)) !Expression(T) {
-            const f = self.base.*;
-            const f_prime = try f.d(var_name, factory);
-            const g = self.exponent.*;
-            const g_prime = try g.d(var_name, factory);
-
-            const f_pow_g = Expression(T).pow(
-                try factory.create(f),
-                try factory.create(g)
-            );
-
-            const g_prime_ln_f = try factory.mul(&.{
-                g_prime,
-                try factory.ln(try factory.create(f))
+            const e_prod_ln_x = try factory.mul(&.{
+                self.exponent.*,
+                try factory.ln(self.base)
             });
-
-            const g_f_prime_div_f = try factory.mul(&.{
-                g,
-                .div(
-                    try factory.create(f_prime),
-                    try factory.create(f)
-                )
-            });
+            const e_prod_ln_x_prime = try e_prod_ln_x.d(var_name, factory);
 
             return try factory.mul(&.{
-                f_pow_g,
-                try factory.add(&.{
-                    g_prime_ln_f,
-                    g_f_prime_div_f
-                })
+                .{ .Pow = self },
+                e_prod_ln_x_prime
             });
         }
 
@@ -133,9 +114,10 @@ test "power rule of differentiation" {
     const is_eql = d_exp.eqlStructure(expected);
 
     try std.testing.expect(is_eql);
+
 }
 
-test "x^0 == 1" {
+test "rewrite x^0 == 1" {
     const f = try Factory(f32).init(std.testing.allocator);
     defer f.deinit();
 
@@ -148,4 +130,54 @@ test "x^0 == 1" {
     const expected = Expression(f32).constant(1);
 
     try std.testing.expectEqual(r_exp, expected);
+}
+
+test "rewrite x^1==x" {
+    const factory = try Factory(f32).init(std.testing.allocator);
+    defer factory.deinit();
+
+    const exp = Expression(f32).pow(
+        try factory.variablePtr("x"),
+        try factory.constantPtr(1)
+    );
+
+    const r_exp = try exp.rewrite(factory);
+    const expected = Expression(f32).variable("x");
+
+    const is_eql = r_exp.eqlStructure(expected);
+
+    try std.testing.expect(is_eql);
+}
+
+test "rewrite 0^x == 0" {
+    const factory = try Factory(f32).init(std.testing.allocator);
+    defer factory.deinit();
+
+    const exp = Expression(f32).pow(
+        try factory.constantPtr(0),
+        try factory.variablePtr("x")
+    );
+
+    const r_exp = try exp.rewrite(factory);
+    const expected = Expression(f32).constant(0);
+    const is_eql = r_exp.eqlStructure(expected);
+
+    try std.testing.expect(is_eql);
+}
+
+
+test "rewrite 1^x == 1" {
+    const factory = try Factory(f32).init(std.testing.allocator);
+    defer factory.deinit();
+
+    const exp = Expression(f32).pow(
+        try factory.constantPtr(1),
+        try factory.variablePtr("x")
+    );
+
+    const r_exp = try exp.rewrite(factory);
+    const expected = Expression(f32).constant(1);
+    const is_eql = r_exp.eqlStructure(expected);
+
+    try std.testing.expect(is_eql);
 }

@@ -12,7 +12,7 @@ pub fn Log(comptime T: type) type {
         const Self = @This();
 
         pub fn initExp(b: *Expression(T), x: *Expression(T)) Expression(T) {
-            return .log(b, x);
+            return .{ .Log = .{ .b = b, .x = x } };
         }
 
         pub fn isLn(self: Self) bool {
@@ -90,7 +90,8 @@ pub fn Log(comptime T: type) type {
             }
 
             pub fn ln(factory: Factory(T), x: *Expression(T)) !Expression(T) {
-                return .log(try factory.constantPtr(std.math.e), x);
+                const e = try factory.constantPtr(std.math.e);
+                return .log(e, x);
             }
 
             pub fn lnPtr(factory: Factory(T), x: *Expression(T)) !*Expression(T) {

@@ -10,7 +10,7 @@ pub fn Div(comptime T: type) type {
         const Self = @This();
 
         pub fn initExp(num: *Expression(f32), den: *Expression(f32)) Expression(f32) {
-            return .div(num, den);
+            return .{ .Div = .{ .num = num, .den = den } };
         }
         
         pub fn eval(self: Self, args: Expression(T).Args) T {

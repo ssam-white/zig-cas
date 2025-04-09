@@ -1,9 +1,9 @@
 const std = @import("std");
 const Expression = @import("../expression.zig").Expression;
 const Factory = @import("../factory.zig").Factory;
-const linear_combination = @import("../linearCombination.zig");
+const linear_combination = @import("../linear-combination.zig");
 const Operands = @import("operands.zig").Operands;
-const LinearCombination = @import("../linearCombination.zig").LinearCombination;
+const LinearCombination = @import("../linear-combination.zig").LinearCombination;
 
 pub fn Sub(comptime T: type) type {
     return struct {

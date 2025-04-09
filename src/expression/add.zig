@@ -1,7 +1,7 @@
 const std = @import("std");
 const Expression = @import("../expression.zig").Expression;
 const Factory = @import("../factory.zig").Factory;
-const linear_combination = @import("../linearCombination.zig");
+const linear_combination = @import("../linear-combination.zig");
 const LinearCombination = linear_combination.LinearCombination;
 const Operands = @import("operands.zig").Operands;
 
