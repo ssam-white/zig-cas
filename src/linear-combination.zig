@@ -6,19 +6,6 @@ pub fn Term(comptime T: type) type {
     return struct {
         key: Expression(T),
         value: T,
-
-        const Self = @This();
-        
-        fn toExpression(self: Self, factory: Factory(T)) !Expression(T) {
-            return if (self.value == 0)
-                .constant(0)
-            else if (self.value == 1)
-                self.key
-            else try factory.mul(&.{
-                .constant(self.value),
-                self.key
-            });
-        }        
     };
 }
 
@@ -50,10 +37,7 @@ pub fn LinearCombination(
             return try self.toSlice(factory);
         }
 
-        fn insert(
-            self: *Self,
-            exp: Expression(T)
-        ) !void {
+        fn insert(self: *Self, exp: Expression(T)) !void {
             if (self.indexOf(exp)) |i| {
                 Context.addToTerm(&self.terms.items[i]);
             } else {

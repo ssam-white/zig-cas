@@ -9,6 +9,7 @@ const Variable = @import("expression/variable.zig").Variable;
 const Log = @import("expression/log.zig").Log;
 const Div = @import("expression/div.zig").Div;
 const Sub = @import("expression/sub.zig").Sub;
+const Neg = @import("expression/neg.zig").Neg;
 
 pub fn Expression(comptime T: type) type {
     return union(enum) {
@@ -27,6 +28,7 @@ pub fn Expression(comptime T: type) type {
         Log: Log(T),
         Div: Div(T),
         Sub: Sub(T),
+        Neg: Neg(T),
         
         const Self = @This();
 
@@ -41,6 +43,7 @@ pub fn Expression(comptime T: type) type {
         pub const add = Add(T).initExp;
         pub const mul = Mul(T).initExp;
         pub const sub = Sub(T).initExp;
+        pub const neg = Neg(T).initExp;
         
         pub fn eval(self: Self, args: Args) T {
             return switch (self) {

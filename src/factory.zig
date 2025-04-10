@@ -54,5 +54,6 @@ pub fn Factory(comptime T: type) type {
         pub usingnamespace GetFactories(.Log);
         pub usingnamespace GetFactories(.Div);
         pub usingnamespace GetFactories(.Sub);
+        pub usingnamespace GetFactories(.Neg);
     };
 }

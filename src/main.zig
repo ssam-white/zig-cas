@@ -15,24 +15,14 @@ pub fn main() !void {
     defer f.deinit();
 
     const b: E = try f.mul(&.{
-        .constant(1),
-        try f.mul(&.{
-            .constant(1),
-            .constant(1)
-        }),
-        try f.mul(&.{
-            .constant(1),
-            .constant(1)
-        })
+        .neg(try f.variablePtr("x")),
+        .pow(
+            try f.variablePtr("x"),
+            try f.constantPtr(-1)
+        )
     });
 
     b.print();
     std.debug.print("\n= ", .{});
-    const bf = try b.flatten(f);
-    bf.print();
-    std.debug.print("\n= ", .{});
-    const bfr = try bf.rewrite(f);
-    bfr.print();
-    std.debug.print("\n", .{});
 
 }
