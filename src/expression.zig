@@ -15,6 +15,7 @@ pub fn Expression(comptime T: type) type {
         const Errors = error {
             DeriveError,
             RewriteError,
+            FlatteningError,
             NoFlattenFunction
         };
 
@@ -71,10 +72,10 @@ pub fn Expression(comptime T: type) type {
             };
         }
 
-        pub fn flatten(self: Self, factory: Factory(T)) !Expression(T) {
+        pub fn flatten(self: Self, factory: Factory(T)) Errors!Expression(T) {
             return switch (self) {
                 inline .Add, .Mul, .Sub
-                => |e| try e.flatten(factory),
+                => |e| e.flatten(factory) catch Errors.FlatteningError,
                 inline else => Errors.NoFlattenFunction
             };
         }

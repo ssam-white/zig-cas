@@ -56,10 +56,10 @@ pub fn Sub(comptime T: type) type {
             const filtered = try self.operands.filter(factory);
             const collected_ops = try filtered.collectLikeTerms(factory);
 
-            return switch (collected_ops.list.len) {
+            return switch (collected_ops.list.items.len) {
                 0 => .constant(0),
-                1 => collected_ops.list[0],
-                else => try factory.sub(collected_ops.list)
+                1 => collected_ops.list.items[0],
+                else => try factory.sub(collected_ops.list.items)
             };
         }
 

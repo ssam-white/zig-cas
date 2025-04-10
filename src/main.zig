@@ -14,22 +14,23 @@ pub fn main() !void {
     const f: Factory(f32) = try .init(alloc);
     defer f.deinit();
 
-    const b = try f.sub(&.{
-        .variable("x"),
-        try f.sub(&.{
+    const b = try f.mul(&.{
+        try f.mul(&.{
             .constant(1),
-            .constant(1)
+            .constant(1),
         }),
-        try f.sub(&.{
+        try f.mul(&.{
             .constant(1),
             .constant(1)
         })
     });
 
     b.print();
-    std.debug.print("\n", .{});
+    std.debug.print("\n= ", .{});
     const bf = try b.flatten(f);
     bf.print();
-    
+    std.debug.print("\n= ", .{});
+    const bfr = try bf.rewrite(f);
+    bfr.print();
     std.debug.print("\n", .{});
 }

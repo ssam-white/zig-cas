@@ -32,7 +32,7 @@ pub fn Operands(
                 operands[num_ops] = simple_exp;
                 num_ops += 1;
             }
-            return .init(operands[0..num_ops]);
+            return .init(factory.allocator, operands[0..num_ops]);
         }
 
         pub fn print(self: Self, operator: []const u8) void {
@@ -60,7 +60,7 @@ pub fn Operands(
             var like_terms = Context.LinearCombinator.init(factory.allocator);
             defer like_terms.deinit();
             const collected = try like_terms.collect(self.list.items, factory);
-            return .init(collected);
+            return .init(factory.allocator, collected);
         }
 
         pub fn eqlStructure(self: Self, other: Self) bool {
@@ -79,7 +79,8 @@ pub fn Operands(
             var new_operands = Self.init(factory.allocator, &.{});
             for (self.list.items) |exp| {
                 if (exp == tag) {
-                    const to_flatten = @field(exp, @tagName(tag));
+                    const flat_exp = try exp.flatten(factory);
+                    const to_flatten = @field(flat_exp, @tagName(tag));
                     for (to_flatten.operands.list.items) |to_add| {
                         try new_operands.append(to_add);
                     }
