@@ -75,8 +75,6 @@ pub fn LinearCombination(
                         .constant(0)
                     else if (term.value == 1)
                         term.key
-                    else if (term.key.eqlStructure(.constant(1)))
-                        .constant(term.value)
                     else
                         try Context.termToExpression(term, factory);
             }

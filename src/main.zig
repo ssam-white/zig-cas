@@ -14,10 +14,11 @@ pub fn main() !void {
     const f: Factory(f32) = try .init(alloc);
     defer f.deinit();
 
-    const b = try f.mul(&.{
+    const b: E = try f.mul(&.{
+        .constant(1),
         try f.mul(&.{
             .constant(1),
-            .constant(1),
+            .constant(1)
         }),
         try f.mul(&.{
             .constant(1),
@@ -33,4 +34,5 @@ pub fn main() !void {
     const bfr = try bf.rewrite(f);
     bfr.print();
     std.debug.print("\n", .{});
+
 }

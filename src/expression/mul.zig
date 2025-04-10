@@ -13,8 +13,8 @@ pub fn Mul(comptime T: type) type {
 
         const MulOperands = Operands(T, struct {
             pub fn filters(exp: Expression(T)) bool {
-                _ = exp;
-                return false;//exp.eqlStructure(.constant(1));
+                // _ = exp;
+                return exp.eqlStructure(.constant(1));
             }
 
             pub const LinearCombinator = LinearCombination(T, struct {
@@ -23,7 +23,9 @@ pub fn Mul(comptime T: type) type {
                 }
 
                 pub fn termToExpression(term: linear_combination.Term(T), factory: Factory(T)) !Expression(T) {
-                    return .pow(
+                    return if (term.key.eqlStructure(.constant(1)))
+                        .constant(1)
+                    else .pow(
                         try factory.create(term.key),
                         try factory.constantPtr(term.value)
                     );
@@ -63,7 +65,7 @@ pub fn Mul(comptime T: type) type {
             const collected_ops = try filtered.collectLikeTerms(factory);
 
             return switch (collected_ops.list.items.len) {
-                0 => .constant(0),
+                0 => .constant(1),
                 1 => collected_ops.list.items[0],
                 else => try factory.mul(collected_ops.list.items)
             };
