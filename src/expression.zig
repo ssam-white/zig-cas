@@ -14,7 +14,8 @@ pub fn Expression(comptime T: type) type {
     return union(enum) {
         const Errors = error {
             DeriveError,
-            RewriteError
+            RewriteError,
+            NoFlattenFunction
         };
 
         Variable: Variable(T),
@@ -70,13 +71,12 @@ pub fn Expression(comptime T: type) type {
             };
         }
 
-        pub fn allEqlStructure(a_ops: []const Self, b_ops: []const Self) bool {
-            if (a_ops.len != b_ops.len) return false;
-            
-            for (1..a_ops.len) |i| {
-                if (!a_ops[i].eqlStructure(b_ops[i])) return false;
-            }
-            return true;
+        pub fn flatten(self: Self, factory: Factory(T)) !Expression(T) {
+            return switch (self) {
+                inline .Add, .Mul, .Sub
+                => |e| try e.flatten(factory),
+                inline else => Errors.NoFlattenFunction
+            };
         }
     };
 }

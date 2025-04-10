@@ -36,8 +36,8 @@ pub fn Sub(comptime T: type) type {
         }
         
         pub fn eval(self: Self, args: Expression(T).Args) T {
-            var sum = self.operands.items[0].eval(args);
-            for (self.operands.items[1..]) |e| {
+            var sum = self.operands.list[0].eval(args);
+            for (self.operands.list[1..]) |e| {
                 sum -= e.eval(args);
             }
             return sum;
@@ -49,23 +49,28 @@ pub fn Sub(comptime T: type) type {
 
         pub fn d(self: Self, var_name: []const u8, factory: Factory(T)) !Expression(T) {
             const d_ops = try self.operands.deriveTerms(var_name, factory);
-            return .sub(.init(d_ops.items));
+            return .sub(d_ops);
         }
 
         pub fn rewrite(self: Self, factory: Factory(T)) !Expression(T) {
             const filtered = try self.operands.filter(factory);
             const collected_ops = try filtered.collectLikeTerms(factory);
 
-            return switch (collected_ops.items.len) {
+            return switch (collected_ops.list.len) {
                 0 => .constant(0),
-                1 => collected_ops.items[0],
-                else => try factory.sub(collected_ops.items)
+                1 => collected_ops.list[0],
+                else => try factory.sub(collected_ops.list)
             };
         }
 
         pub fn eqlStructure(self: Self, exp: Expression(T)) bool {
             if (exp == .Sub) return false;
-            return Expression(T).allEqlStructure(self.operands.items, exp.Add.operands.items);
+            return self.operands.eqlStructure(exp.Sub.operands);
+        }
+
+        pub fn flatten(self: Self, factory: Factory(T)) !Expression(T) {
+            const flat_operands = try self.operands.flatten(.Sub, factory);
+            return .sub(flat_operands);
         }
 
         pub const Factories = struct {
@@ -75,7 +80,7 @@ pub fn Sub(comptime T: type) type {
 
             pub fn sub(factory: Factory(T), operands: []const Expression(T)) !Expression(T) {
                 const operands_ptr = try factory.allocAll(operands);
-                return .sub(.init(operands_ptr));
+                return .sub(.init(factory.allocator, operands_ptr));
             }
         };
     };

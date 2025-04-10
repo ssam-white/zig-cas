@@ -41,7 +41,7 @@ pub fn Log(comptime T: type) type {
 
 
         fn changeBaseD(self: Self, var_name: []const u8, factory: Factory(T)) !Expression(T) {
-            return Expression(T).div(
+            return try Expression(T).div(
                 try factory.lnPtr(self.x),
                 try factory.lnPtr(self.b)
             ).d(var_name, factory);

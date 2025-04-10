@@ -48,29 +48,34 @@ pub fn Mul(comptime T: type) type {
         }
 
         pub fn d(self: Self, var_name: []const u8, factory: Factory(T)) !Expression(T) {
-            const operands = try factory.alloc(self.operands.items.len);
+            const operands = try factory.alloc(self.operands.list.items.len);
             for (operands, 0..) |_, i| {
-                const terms = try factory.allocAll(self.operands.items);
-                terms[i] = try self.operands.items[i].d(var_name, factory);
-                operands[i] = .mul(.init(terms));
+                const terms = try factory.allocAll(self.operands.list.items);
+                terms[i] = try self.operands.list.items[i].d(var_name, factory);
+                operands[i] = .mul(.init(factory.allocator, terms));
             }
-            return .add(.init(operands));
+            return .add(.init(factory.allocator, operands));
         }
 
         pub fn rewrite(self: Self, factory: Factory(T)) !Expression(T) {
             const filtered = try self.operands.filter(factory);
             const collected_ops = try filtered.collectLikeTerms(factory);
 
-            return switch (collected_ops.items.len) {
+            return switch (collected_ops.list.len) {
                 0 => .constant(0),
-                1 => collected_ops.items[0],
-                else => try factory.mul(collected_ops.items)
+                1 => collected_ops.list[0],
+                else => try factory.mul(collected_ops.list)
             };
         }
 
         pub fn eqlStructure(self: Self, exp: Expression(T)) bool {
             if (exp != .Mul) return false;
-            return Expression(T).allEqlStructure(self.operands.items, exp.Mul.operands.items);
+            return self.operands.eqlStructure(exp.Mul.operands);
+        }
+
+        pub fn flatten(self: Self, factory: Factory(T)) !Expression(T) {
+            const flat_operands = try self.operands.flatten(.Mul, factory);
+            return .mul(flat_operands);
         }
 
         pub const Factories = struct {
@@ -81,7 +86,7 @@ pub fn Mul(comptime T: type) type {
 
             pub fn mul(factory: Factory(T), operands: []const Expression(T)) !Expression(T) {
                 const operands_ptr = try factory.allocAll(operands);
-                return .mul(.init(operands_ptr));
+                return .mul(.init(factory.allocator, operands_ptr));
             }
         };
     };

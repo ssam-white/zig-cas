@@ -35,8 +35,8 @@ pub fn Add(comptime T: type) type {
         }
         
         pub fn eval(self: Self, args: Expression(T).Args) T {
-            var sum = self.operands.items[0].eval(args);
-            for (self.operands.items[1..]) |e| {
+            var sum = self.operands.list[0].eval(args);
+            for (self.operands.list[1..]) |e| {
                 sum += e.eval(args);
             }
             return sum;
@@ -48,34 +48,39 @@ pub fn Add(comptime T: type) type {
 
         pub fn d(self: Self, var_name: []const u8, factory: Factory(T)) !Expression(T) {
             const d_ops = try self.operands.deriveTerms(var_name, factory);
-            return .add(.init(d_ops.items));
+            return .add(d_ops);
         }
 
         pub fn rewrite(self: Self, factory: Factory(T)) !Expression(T) {
             const filtered = try self.operands.filter(factory);
             const collected_ops = try filtered.collectLikeTerms(factory);
             
-            return switch (collected_ops.items.len) {
+            return switch (collected_ops.list.len) {
                 0 => .constant(0),
-                1 => collected_ops.items[0],
-                else => try factory.add(collected_ops.items)
+                1 => collected_ops.list[0],
+                else => try factory.add(collected_ops.list)
             };
         }
 
         pub fn eqlStructure(self: Self, exp: Expression(T)) bool {
             if (exp != .Add) return false;
-            return Expression(T).allEqlStructure(self.operands.items, exp.Add.operands.items);
+            return self.operands.eqlStructure(exp.Add.operands);
+        }
+
+        pub fn flatten(self: Self, factory: Factory(T)) !Expression(T) {
+            const flat_operands = try self.operands.flatten(.Add, factory);
+            return .add(flat_operands);
         }
 
         pub const Factories = struct {
             pub fn addPtr(factory: Factory(T), operands: []const Expression(T)) !*Expression(T) {
                 const operands_ptr = try factory.allocAll(operands);
-                return try factory.create(add(operands_ptr));
+                return try factory.create(.add(factory.allocator, operands_ptr));
             }
 
             pub fn add(factory: Factory(T), operands: []const Expression(T)) !Expression(T) {
                 const operands_ptr = try factory.allocAll(operands);
-                return .add(.init(operands_ptr));
+                return .add(.init(factory.allocator, operands_ptr));
             }
         };
     };
