@@ -65,9 +65,9 @@ pub fn Expression(comptime T: type) type {
             };
         }
 
-        pub fn rewrite(self: Self, factory: Factory(T)) Errors!Expression(T) {
+        pub fn simplify(self: Self, factory: Factory(T)) Errors!Expression(T) {
             return switch (self) {
-                inline else => |e| e.rewrite(factory) catch Errors.RewriteError
+                inline else => |e| e.simplify(factory) catch Errors.RewriteError
             };
         }
 

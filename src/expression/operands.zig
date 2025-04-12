@@ -131,7 +131,11 @@ pub fn Operands(
                     try new_operands.append(folded_exp);
                 }
             }
-            try new_operands.append(.constant(sum));
+
+            if (sum != Context.identity) {
+                try new_operands.append(.constant(sum));
+            }
+
             return new_operands;
         }
     };

@@ -73,7 +73,7 @@ pub fn Log(comptime T: type) type {
             else .{ .Log = self };
         }
 
-        pub fn rewrite(self: Self, factory: Factory(T)) !Expression(T) {
+        pub fn simplify(self: Self, factory: Factory(T)) !Expression(T) {
             const simple_b = try self.b.*.rewrite(factory);
             const simple_x = try self.x.*.rewrite(factory);
 

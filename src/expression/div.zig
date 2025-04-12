@@ -60,7 +60,7 @@ pub fn Div(comptime T: type) type {
             else .{ .Div = self };
         }
 
-        pub fn rewrite(self: Self, factory: Factory(T)) !Expression(T) {
+        pub fn simplify(self: Self, factory: Factory(T)) !Expression(T) {
             const simple_num = try self.num.*.rewrite(factory);
             const simple_den = try self.den.*.rewrite(factory);
 

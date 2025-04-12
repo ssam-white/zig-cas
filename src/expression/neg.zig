@@ -33,7 +33,7 @@ pub fn Neg(comptime T: type) type {
             else .{ .Neg = self };
         }
 
-        pub fn rewrite(self: Self, factory: Factory(T)) !Expression(T) {
+        pub fn simplify(self: Self, factory: Factory(T)) !Expression(T) {
             const new_exp = try self.exp.*.rewrite(factory);
             return .neg(try factory.create(new_exp));
         }

@@ -35,7 +35,7 @@ pub fn Variable(comptime T: type) type {
             return .{ .Variable = self };
         }
 
-        pub fn rewrite(self: Self, _: Factory(T)) !Expression(T) {
+        pub fn simplify(self: Self, _: Factory(T)) !Expression(T) {
             return .{ .Variable = self };
         }
 

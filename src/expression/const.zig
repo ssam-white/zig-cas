@@ -33,7 +33,7 @@ pub fn Const(comptime T: type) type {
             return .{ .Const = self };
         }
 
-        pub fn rewrite(self: Self, _: Factory(T)) !Expression(T) {
+        pub fn simplify(self: Self, _: Factory(T)) !Expression(T) {
             return .{ .Const = self };
         }
 

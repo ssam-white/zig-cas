@@ -66,15 +66,18 @@ pub fn Sub(comptime T: type) type {
             return .sub( try self.operands.constantFold(factory) );
         }
 
-        pub fn rewrite(self: Self, factory: Factory(T)) !Expression(T) {
-            const filtered = try self.operands.filter(factory);
-            const collected_ops = try filtered.collectLikeTerms(factory);
-
-            return switch (collected_ops.list.items.len) {
+        pub fn expFromOperands(operands: SubOperands) Expression(T) {
+            return switch (operands.list.items.len) {
                 0 => .constant(0),
-                1 => collected_ops.list.items[0],
-                else => try factory.sub(collected_ops.list.items)
+                1 => operands.list.items[0],
+                else => .sub(operands)
             };
+        }
+
+        pub fn simplify(self: Self, factory: Factory(T)) !Expression(T) {
+            const filtered = try self.operands.filter(factory);
+            const collected = try filtered.collectLikeTerms(factory);
+            return expFromOperands(collected);
         }
 
         pub fn eqlStructure(self: Self, exp: Expression(T)) bool {

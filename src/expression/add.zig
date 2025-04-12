@@ -30,7 +30,7 @@ pub fn Add(comptime T: type) type {
 
                 pub fn termToExpression(term: linear_combination.Term(T), factory: Factory(T)) !Expression(T) {
                     const prod = try factory.mul(&.{ term.value, term.key });
-                    return try prod.constantFold(factory);
+                    return prod.rewrite(factory);
                 }
 
                 pub fn termFromExpression(exp: Expression(T), _: Factory(T)) !linear_combination.Term(T) {
@@ -68,18 +68,21 @@ pub fn Add(comptime T: type) type {
             return .add( try self.operands.constantFold(factory) );
         }
 
-        pub fn rewrite(self: Self, factory: Factory(T)) !Expression(T) {
+        pub fn expFromOperands(operands: AddOperands) Expression(T) {
+            return switch (operands.list.items.len) {
+                0 => .constant(0),
+                1 => operands.list.items[0],
+                else => .add(operands)
+            };
+        }
+
+        pub fn simplify(self: Self, factory: Factory(T)) !Expression(T) {
             const flattened = try self.operands.flatten(.Add, factory);
             const filtered = try flattened.filter(factory);
             const folded = try filtered.constantFold(factory);
             const collected = try folded.collectLikeTerms(factory);
             
-            const final_operands = collected.list.items;
-            return switch (final_operands.len) {
-                0 => .constant(0),
-                1 => final_operands[0],
-                else => try factory.add(final_operands)
-            };
+            return expFromOperands(collected);
         }
 
         pub fn eqlStructure(self: Self, exp: Expression(T)) bool {

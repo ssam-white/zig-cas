@@ -77,7 +77,7 @@ pub fn Pow(comptime T: type) type {
             
         }
 
-        pub fn rewrite(self: Self, factory: Factory(T)) !Expression(T) {
+        pub fn simplify(self: Self, factory: Factory(T)) !Expression(T) {
             const simple_b = try self.base.*.rewrite(factory);
             const simple_e = try self.exponent.*.rewrite(factory);
 

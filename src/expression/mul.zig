@@ -30,12 +30,10 @@ pub fn Mul(comptime T: type) type {
                 }
 
                 pub fn termToExpression(term: linear_combination.Term(T), factory: Factory(T)) !Expression(T) {
-                    return if (term.key.eqlStructure(.constant(0)))
-                        .constant(1)
-                    else .pow(
+                    return try Expression(T).pow(
                         try factory.create(term.key),
-                        try factory.create(try term.value.rewrite(factory))
-                    );
+                        try factory.create(term.value)
+                    ).rewrite(factory);
                 }
 
                 pub fn termFromExpression(exp: Expression(T), factory: Factory(T)) !linear_combination.Term(T) {
@@ -78,7 +76,7 @@ pub fn Mul(comptime T: type) type {
             return .mul( try self.operands.constantFold(factory) );
         }
 
-        pub fn fold(operands: MulOperands) Expression(T) {
+        pub fn expFromOperands(operands: MulOperands) Expression(T) {
             return switch (operands.list.items.len) {
                 0 => .constant(0),
                 1 => operands.list.items[0],
@@ -88,16 +86,16 @@ pub fn Mul(comptime T: type) type {
 
         pub fn filter(self: Self, factory: Factory(T)) !Expression(T) {
             const filtered = try self.operands.filter(factory);
-            return fold(filtered);
+            return expFromOperands(filtered);
         }
 
-        pub fn rewrite(self: Self, factory: Factory(T)) !Expression(T) {
+        pub fn simplify(self: Self, factory: Factory(T)) !Expression(T) {
             const filtered = try self.filter(factory);
             if (filtered == .Mul)  {
                 const as_pow = try filtered.asPow(factory);
                 const collected = try as_pow.Mul.operands.collectLikeTerms(factory);
-                return fold(collected);
-            } else return filtered;
+                return expFromOperands(collected);
+            } else return try filtered.rewrite(factory);
         }
 
         pub fn eqlStructure(self: Self, exp: Expression(T)) bool {
