@@ -59,6 +59,20 @@ pub fn Log(comptime T: type) type {
             else try self.changeBaseD(var_name, factory);
         }
 
+        pub fn constantEval(self: Self) T {
+            std.debug.assert(
+                self.b.* == .Const and
+                self.x.* == .Const
+            );
+            return std.math.log(T, self.b.*.Const.value, self.x.*.Const.value);
+        }
+
+        pub fn constantFold(self: Self, _: Factory(T)) !Expression(T) {
+            return if (self.b.* == .Const and self.x.* == .Const)
+                .constant(self.constantEval())
+            else .{ .Log = self };
+        }
+
         pub fn rewrite(self: Self, factory: Factory(T)) !Expression(T) {
             const simple_b = try self.b.*.rewrite(factory);
             const simple_x = try self.x.*.rewrite(factory);

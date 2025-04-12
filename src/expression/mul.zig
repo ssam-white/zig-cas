@@ -12,25 +12,39 @@ pub fn Mul(comptime T: type) type {
         const Self = @This();
 
         const MulOperands = Operands(T, struct {
-            pub fn filters(exp: Expression(T)) bool {
-                // _ = exp;
-                return exp.eqlStructure(.constant(1));
+            pub const identity = 1;
+            
+            pub fn compute(a: T, b: T) T {
+                return a * b;
             }
 
             pub const LinearCombinator = LinearCombination(T, struct {
-                pub fn addToTerm(s: *linear_combination.Term(T)) void {
-                    s.value += 1;
+                pub fn addToTerm(t: *linear_combination.Term(T), exp: Expression(T), factory: Factory(T)) !void {
+                    const new_value = try factory.add(&.{ t.value, exp.Pow.exponent.* });
+                    t.value = try new_value.rewrite(factory);
+                }
+
+                pub fn isMatch(term: linear_combination.Term(T), exp: Expression(T)) bool {
+                    if (exp != .Pow) return false;
+                    return term.key.eqlStructure(exp.Pow.base.*);
                 }
 
                 pub fn termToExpression(term: linear_combination.Term(T), factory: Factory(T)) !Expression(T) {
-                    return if (term.key.eqlStructure(.constant(1)))
+                    return if (term.key.eqlStructure(.constant(0)))
                         .constant(1)
                     else .pow(
                         try factory.create(term.key),
-                        try factory.constantPtr(term.value)
+                        try factory.create(try term.value.rewrite(factory))
                     );
                 }
 
+                pub fn termFromExpression(exp: Expression(T), factory: Factory(T)) !linear_combination.Term(T) {
+                    const pow_exp = try exp.asPow(factory);
+                    return .{
+                        .key = pow_exp.Pow.base.*,
+                        .value = pow_exp.Pow.exponent.*
+                    };
+                }
             });
         });
 
@@ -55,20 +69,35 @@ pub fn Mul(comptime T: type) type {
             for (operands, 0..) |_, i| {
                 const terms = try factory.allocAll(self.operands.list.items);
                 terms[i] = try self.operands.list.items[i].d(var_name, factory);
-                operands[i] = .mul(.init(factory.allocator, terms));
+                operands[i] = .mul(.fromOwnedSlice(factory.allocator, terms));
             }
-            return .add(.init(factory.allocator, operands));
+            return .add(.fromOwnedSlice(factory.allocator, operands));
+        }
+
+        pub fn constantFold(self: Self, factory: Factory(T)) !Expression(T) {
+            return .mul( try self.operands.constantFold(factory) );
+        }
+
+        pub fn fold(operands: MulOperands) Expression(T) {
+            return switch (operands.list.items.len) {
+                0 => .constant(0),
+                1 => operands.list.items[0],
+                else => .mul(operands)
+            };
+        }
+
+        pub fn filter(self: Self, factory: Factory(T)) !Expression(T) {
+            const filtered = try self.operands.filter(factory);
+            return fold(filtered);
         }
 
         pub fn rewrite(self: Self, factory: Factory(T)) !Expression(T) {
-            const filtered = try self.operands.filter(factory);
-            const collected_ops = try filtered.collectLikeTerms(factory);
-
-            return switch (collected_ops.list.items.len) {
-                0 => .constant(1),
-                1 => collected_ops.list.items[0],
-                else => try factory.mul(collected_ops.list.items)
-            };
+            const filtered = try self.filter(factory);
+            if (filtered == .Mul)  {
+                const as_pow = try filtered.asPow(factory);
+                const collected = try as_pow.Mul.operands.collectLikeTerms(factory);
+                return fold(collected);
+            } else return filtered;
         }
 
         pub fn eqlStructure(self: Self, exp: Expression(T)) bool {
@@ -81,6 +110,12 @@ pub fn Mul(comptime T: type) type {
             return .mul(flat_operands);
         }
 
+        pub fn asPow(self: Self, factory: Factory(T)) !Expression(T) {
+            const ops_as_pow = try self.operands.asPow(factory);
+            return .mul( ops_as_pow );
+        }
+
+
         pub const Factories = struct {
             pub fn mulPtr(factory: Factory(T), operands: []const Expression(T)) !*Expression(T) {
                 const operands_ptr = try factory.allocAll(operands);
@@ -89,7 +124,7 @@ pub fn Mul(comptime T: type) type {
 
             pub fn mul(factory: Factory(T), operands: []const Expression(T)) !Expression(T) {
                 const operands_ptr = try factory.allocAll(operands);
-                return .mul(.init(factory.allocator, operands_ptr));
+                return .mul(.fromOwnedSlice(factory.allocator, operands_ptr));
             }
         };
     };

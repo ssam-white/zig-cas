@@ -29,6 +29,10 @@ pub fn Const(comptime T: type) type {
         }
 
 
+        pub fn constantFold(self: Self, _: Factory(T)) !Expression(T) {
+            return .{ .Const = self };
+        }
+
         pub fn rewrite(self: Self, _: Factory(T)) !Expression(T) {
             return .{ .Const = self };
         }

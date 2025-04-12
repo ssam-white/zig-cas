@@ -17,7 +17,9 @@ pub fn Expression(comptime T: type) type {
             DeriveError,
             RewriteError,
             FlatteningError,
-            NoFlattenFunction
+            NoFlattenFunction,
+            AsPowError,
+            ConstantFoldError,
         };
 
         Variable: Variable(T),
@@ -80,6 +82,23 @@ pub fn Expression(comptime T: type) type {
                 inline .Add, .Mul, .Sub
                 => |e| e.flatten(factory) catch Errors.FlatteningError,
                 inline else => Errors.NoFlattenFunction
+            };
+        }
+
+        pub fn asPow(self: Self, factory: Factory(T)) Errors!Self {
+                return switch(self) {
+                    inline .Pow => self,
+                    inline .Mul, .Div => |e| e.asPow(factory) catch return Errors.AsPowError,
+                    inline else => Self.pow(
+                        factory.create(self) catch return Errors.AsPowError,
+                        factory.constantPtr(1) catch return Errors.AsPowError
+                    )
+                };
+        }
+
+        pub fn constantFold(self: Self, factory: Factory(T)) Errors!Expression(T) {
+            return switch (self) {
+                inline else => |e| e.constantFold(factory) catch Errors.ConstantFoldError
             };
         }
     };

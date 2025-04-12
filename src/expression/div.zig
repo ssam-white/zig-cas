@@ -46,6 +46,20 @@ pub fn Div(comptime T: type) type {
             return .div(u_prime_v_sub_u_v_prime, v_sqrd);
         }
 
+        pub fn constantEval(self: Self) !T {
+            std.debug.assert(
+                self.num.* == .Const and
+                self.den.* == .Const
+            );
+            return try std.math.divExact(T, self.num.*.Const.value, self.den.*.Const.value);
+        }
+
+        pub fn constantFold(self: Self, _: Factory(T)) !Expression(T) {
+            return if (self.num.* == .Const and self.den.* == .Const)
+                .constant( try self.constantEval() )
+            else .{ .Div = self };
+        }
+
         pub fn rewrite(self: Self, factory: Factory(T)) !Expression(T) {
             const simple_num = try self.num.*.rewrite(factory);
             const simple_den = try self.den.*.rewrite(factory);
@@ -68,6 +82,15 @@ pub fn Div(comptime T: type) type {
             const den_eql_structure = self.den.*.eqlStructure(exp.Div.den.*);
 
             return num_eql_structure and den_eql_structure;
+        }
+
+        pub fn asPow(self: Self, factory: Factory(T)) !Expression(T) {
+            return .pow(
+                self.den,
+                try factory.negPtr(
+                    self.num
+                )
+            );
         }
 
         pub const Factories = struct {

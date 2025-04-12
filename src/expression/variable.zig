@@ -27,10 +27,12 @@ pub fn Variable(comptime T: type) type {
         }
 
         pub fn d(self: Self, var_name: []const u8, _: Factory(T)) !Expression(T) {
-            return if (std.mem.eql(u8, self.name, var_name))
-                .{ .Const = .{ .value = 1 } }
-            else
-                .{ .Const = .{ .value = 0 } };
+            return if (std.mem.eql(u8, self.name, var_name)) .constant(1)
+            else .constant(0);
+        }
+
+        pub fn constantFold(self: Self, _: Factory(T)) !Expression(T) {
+            return .{ .Variable = self };
         }
 
         pub fn rewrite(self: Self, _: Factory(T)) !Expression(T) {

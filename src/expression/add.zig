@@ -12,20 +12,32 @@ pub fn Add(comptime T: type) type {
         const Self = @This();
 
         const AddOperands = Operands(T, struct {
-            pub fn filters(exp: Expression(T)) bool {
-                return exp.eqlStructure(.constant(0));
+            pub const identity = 0;
+
+            pub fn compute(a: T, b: T) T {
+                return a + b;
             }
 
             pub const LinearCombinator = LinearCombination(T, struct {
-                pub fn addToTerm(s: *linear_combination.Term(T)) void {
-                    s.value += 1;
+                pub fn addToTerm(term: *linear_combination.Term(T), _: Expression(T), factory: Factory(T)) !void {
+                    const new_value = try factory.add(&.{ term.value, .constant(1) });
+                    term.value = try new_value.rewrite(factory);
+                }
+
+                pub fn isMatch(term: linear_combination.Term(T), exp: Expression(T)) bool {
+                    return term.key.eqlStructure(exp);
                 }
 
                 pub fn termToExpression(term: linear_combination.Term(T), factory: Factory(T)) !Expression(T) {
-                    return try factory.mul(&.{
-                        .constant(term.value),
-                        term.key
-                    });
+                    const prod = try factory.mul(&.{ term.value, term.key });
+                    return try prod.constantFold(factory);
+                }
+
+                pub fn termFromExpression(exp: Expression(T), _: Factory(T)) !linear_combination.Term(T) {
+                    return .{
+                        .key = exp,
+                        .value = .constant(1)
+                    };
                 }
             });
         });
@@ -51,14 +63,22 @@ pub fn Add(comptime T: type) type {
             return .add(d_ops);
         }
 
+
+        pub fn constantFold(self: Self, factory: Factory(T)) !Expression(T) {
+            return .add( try self.operands.constantFold(factory) );
+        }
+
         pub fn rewrite(self: Self, factory: Factory(T)) !Expression(T) {
-            const filtered = try self.operands.filter(factory);
-            const collected_ops = try filtered.collectLikeTerms(factory);
+            const flattened = try self.operands.flatten(.Add, factory);
+            const filtered = try flattened.filter(factory);
+            const folded = try filtered.constantFold(factory);
+            const collected = try folded.collectLikeTerms(factory);
             
-            return switch (collected_ops.list.items.len) {
+            const final_operands = collected.list.items;
+            return switch (final_operands.len) {
                 0 => .constant(0),
-                1 => collected_ops.list.items[0],
-                else => try factory.add(collected_ops.list.items)
+                1 => final_operands[0],
+                else => try factory.add(final_operands)
             };
         }
 
@@ -80,7 +100,7 @@ pub fn Add(comptime T: type) type {
 
             pub fn add(factory: Factory(T), operands: []const Expression(T)) !Expression(T) {
                 const operands_ptr = try factory.allocAll(operands);
-                return .add(.init(factory.allocator, operands_ptr));
+                return .add(.fromOwnedSlice(factory.allocator, operands_ptr));
             }
         };
     };

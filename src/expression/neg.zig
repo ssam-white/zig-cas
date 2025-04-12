@@ -22,11 +22,20 @@ pub fn Neg(comptime T: type) type {
         }
 
         pub fn d(self: Self, var_name: []const u8, factory: Factory(T)) !Expression(T) {
-            return .neg( try self.exp.*.d(var_name, factory) );
+            const d_exp = try self.exp.*.d(var_name, factory);
+            const d_exp_ptr = try factory.create(d_exp);
+            return .neg(d_exp_ptr);
+        }
+
+        pub fn constantFold(self: Self, _: Factory(T)) !Expression(T) {
+            return if (self.exp.* == .Const)
+                .constant(-self.exp.*.Const.value)
+            else .{ .Neg = self };
         }
 
         pub fn rewrite(self: Self, factory: Factory(T)) !Expression(T) {
-            return .neg( try self.exp.*.rewrite(factory) );
+            const new_exp = try self.exp.*.rewrite(factory);
+            return .neg(try factory.create(new_exp));
         }
 
         pub fn eqlStructure(self: Self, exp: Expression(T)) bool {
@@ -35,7 +44,7 @@ pub fn Neg(comptime T: type) type {
         }
 
         pub const Factories = struct {
-            pub fn negPtr(factory: Factory(T), exp: *Expression(T)) !Expression(T) {
+            pub fn negPtr(factory: Factory(T), exp: *Expression(T)) !*Expression(T) {
                 return try factory.create(.neg(exp));
             }
         };

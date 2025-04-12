@@ -14,15 +14,17 @@ pub fn main() !void {
     const f: Factory(f32) = try .init(alloc);
     defer f.deinit();
 
-    const b: E = try f.mul(&.{
-        .neg(try f.variablePtr("x")),
-        .pow(
-            try f.variablePtr("x"),
-            try f.constantPtr(-1)
-        )
-    });
+    const b: E = .pow(
+        try f.variablePtr("x"),
+        try f.variablePtr("x")
+    );
 
     b.print();
     std.debug.print("\n= ", .{});
-
+    const bd = try b.d("x", f);
+    bd.print();
+    std.debug.print("\n= ", .{});
+    const br = try bd.rewrite(f);
+    br.print();
+    std.debug.print("\n", .{});
 }

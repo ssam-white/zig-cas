@@ -10,11 +10,20 @@ pub fn Operands(
     comptime Context: type
 ) type {
     return struct {
+        const Errors = error {
+            AsPowError,
+        };
+
         list: ArrayList(Expression(T)),
 
         const Self = @This();
         
-        pub fn init(allocator: std.mem.Allocator, items: []Expression(T)) Self {
+        pub fn init(allocator: std.mem.Allocator) Self {
+            const list = std.ArrayList(Expression(T)).init(allocator);
+            return .{ .list = list };
+        }
+
+        pub fn fromOwnedSlice(allocator: std.mem.Allocator, items: []Expression(T)) Self {
             const list = ArrayList(Expression(T)).fromOwnedSlice(allocator, items);
             return .{ .list = list };
         }
@@ -24,15 +33,17 @@ pub fn Operands(
         }
 
         pub fn filter(self: Self, factory: Factory(T)) !Self {
-            const operands = try factory.alloc(self.list.items.len);
-            var num_ops: usize = 0;
+            var new_operands = Self.init(factory.allocator);
             for (self.list.items) |exp| {
                 const simple_exp = try exp.rewrite(factory);
-                if (Context.filters(simple_exp)) continue;
-                operands[num_ops] = simple_exp;
-                num_ops += 1;
+                if (simple_exp.eqlStructure(
+                    .constant(Context.identity)
+                )) {
+                    continue;
+                }
+                try new_operands.append(simple_exp);
             }
-            return .init(factory.allocator, operands[0..num_ops]);
+            return new_operands;
         }
 
         pub fn print(self: Self, operator: []const u8) void {
@@ -53,14 +64,15 @@ pub fn Operands(
             for (self.list.items, 0..) |exp, i| {
                 d_ops[i] = try exp.d(var_name, factory);
             }
-            return .init(factory.allocator, d_ops);
+            return .fromOwnedSlice(factory.allocator, d_ops);
         }
 
         pub fn collectLikeTerms(self: Self, factory: Factory(T)) !Self {
+            if (self.list.items.len == 1) return self;
+            
             var like_terms = Context.LinearCombinator.init(factory.allocator);
-            defer like_terms.deinit();
             const collected = try like_terms.collect(self.list.items, factory);
-            return .init(factory.allocator, collected);
+            return .fromOwnedSlice(factory.allocator, collected);
         }
 
         pub fn eqlStructure(self: Self, other: Self) bool {
@@ -76,7 +88,7 @@ pub fn Operands(
             comptime tag: Expression(T).Tag,
             factory: Factory(T)
         ) !Self {
-            var new_operands = Self.init(factory.allocator, &.{});
+            var new_operands = Self.init(factory.allocator);
             for (self.list.items) |exp| {
                 if (exp == tag) {
                     const flat_exp = try exp.flatten(factory);
@@ -88,6 +100,38 @@ pub fn Operands(
                     try new_operands.append(exp);
                 }
             }
+            return new_operands;
+        }
+
+        pub fn asPow(self: Self, factory: Factory(T)) anyerror!Self {
+            var new_operands = Self.init(factory.allocator);
+            for (self.list.items) |exp| {
+                try new_operands.append(try exp.asPow(factory));
+            }
+            return new_operands;
+        }
+
+        pub fn rewriteChildren(self: Self, factory: Factory(T)) !Self {
+            var new_operands = Self.init(factory.allocator);
+            for (self.list.items) |exp| {
+                const rewritten = try exp.rewrite(factory);
+                try new_operands.append(rewritten);
+            }
+            return new_operands;
+        }
+
+        pub fn constantFold(self: Self, factory: Factory(T)) !Self {
+            var new_operands = Self.init(factory.allocator);
+            var sum: T = Context.identity;
+            for (self.list.items) |exp| {
+                const folded_exp = try exp.constantFold(factory);
+                if (folded_exp == .Const) {
+                    sum = Context.compute(sum, folded_exp.Const.value);
+                } else {
+                    try new_operands.append(folded_exp);
+                }
+            }
+            try new_operands.append(.constant(sum));
             return new_operands;
         }
     };

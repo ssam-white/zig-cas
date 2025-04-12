@@ -61,6 +61,22 @@ pub fn Pow(comptime T: type) type {
             };
         }
 
+        pub fn constantEval(self: Self) T {
+            std.debug.assert(
+                self.base.* == .Const and
+                self.exponent.* == .Const
+            );
+            return std.math.pow(T, self.base.*.Const.value, self.exponent.*.Const.value);
+        }
+        
+        pub fn constantFold(self: Self, _: Factory(T)) !Expression(T) {
+            return if (self.base.* == .Const and self.exponent.* == .Const)
+                .constant(self.constantEval())
+            else .{ .Pow = self };
+                
+            
+        }
+
         pub fn rewrite(self: Self, factory: Factory(T)) !Expression(T) {
             const simple_b = try self.base.*.rewrite(factory);
             const simple_e = try self.exponent.*.rewrite(factory);

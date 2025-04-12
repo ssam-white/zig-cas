@@ -12,20 +12,30 @@ pub fn Sub(comptime T: type) type {
         const Self = @This();
 
         const SubOperands = Operands(T, struct {
-            pub fn filters(exp: Expression(T)) bool {
-                return exp.eqlStructure(.constant(0));
+            pub const identity = 0;
+
+            pub fn compute(a: T, b: T) T {
+                return a - b;
             }
 
             pub const LinearCombinator = LinearCombination(T, struct {
-                pub fn addToTerm(s: *linear_combination.Term(T)) void {
-                    s.value -= 1;
+                pub fn addToTerm(t: *linear_combination.Term(T), _: Expression(T), factory: Factory(T)) !void {
+                    t.value = try factory.sub(&.{ t.value, .constant(1) });
+                }
+
+                pub fn isMatch(term: linear_combination.Term(T), exp: Expression(T)) bool {
+                    return term.key.eqlStructure(exp);
                 }
 
                 pub fn termToExpression(term: linear_combination.Term(T), factory: Factory(T)) !Expression(T) {
-                    return try factory.mul(&.{
-                        .constant(term.value),
-                        term.key
-                    });
+                    return try factory.mul(&.{ term.value, term.key });
+                }
+
+                pub fn termFromExpression(exp: Expression(T), _: Factory(T)) !linear_combination.Term(T) {
+                    return .{
+                        .key = exp,
+                        .value = .constant(1)
+                    };
                 }
             });
 
@@ -50,6 +60,10 @@ pub fn Sub(comptime T: type) type {
         pub fn d(self: Self, var_name: []const u8, factory: Factory(T)) !Expression(T) {
             const d_ops = try self.operands.deriveTerms(var_name, factory);
             return .sub(d_ops);
+        }
+
+        pub fn constantFold(self: Self, factory: Factory(T)) !Expression(T) {
+            return .sub( try self.operands.constantFold(factory) );
         }
 
         pub fn rewrite(self: Self, factory: Factory(T)) !Expression(T) {
@@ -80,7 +94,7 @@ pub fn Sub(comptime T: type) type {
 
             pub fn sub(factory: Factory(T), operands: []const Expression(T)) !Expression(T) {
                 const operands_ptr = try factory.allocAll(operands);
-                return .sub(.init(factory.allocator, operands_ptr));
+                return .sub(.fromOwnedSlice(factory.allocator, operands_ptr));
             }
         };
     };
