@@ -61,8 +61,8 @@ pub fn Div(comptime T: type) type {
         }
 
         pub fn simplify(self: Self, factory: Factory(T)) !Expression(T) {
-            const simple_num = try self.num.*.rewrite(factory);
-            const simple_den = try self.den.*.rewrite(factory);
+            const simple_num = try self.num.*.simplify(factory);
+            const simple_den = try self.den.*.simplify(factory);
 
             return if (simple_den.eqlStructure(.constant(1)))
                 self.num.*

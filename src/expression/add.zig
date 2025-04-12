@@ -21,7 +21,8 @@ pub fn Add(comptime T: type) type {
             pub const LinearCombinator = LinearCombination(T, struct {
                 pub fn addToTerm(term: *linear_combination.Term(T), _: Expression(T), factory: Factory(T)) !void {
                     const new_value = try factory.add(&.{ term.value, .constant(1) });
-                    term.value = try new_value.rewrite(factory);
+                    const flat_and_fold = try new_value.Add.operands.flattenAndFold(.Add, factory);
+                    term.value = .add(flat_and_fold);
                 }
 
                 pub fn isMatch(term: linear_combination.Term(T), exp: Expression(T)) bool {
@@ -30,7 +31,7 @@ pub fn Add(comptime T: type) type {
 
                 pub fn termToExpression(term: linear_combination.Term(T), factory: Factory(T)) !Expression(T) {
                     const prod = try factory.mul(&.{ term.value, term.key });
-                    return prod.rewrite(factory);
+                    return prod.simplify(factory);
                 }
 
                 pub fn termFromExpression(exp: Expression(T), _: Factory(T)) !linear_combination.Term(T) {
@@ -78,11 +79,15 @@ pub fn Add(comptime T: type) type {
 
         pub fn simplify(self: Self, factory: Factory(T)) !Expression(T) {
             const flattened = try self.operands.flatten(.Add, factory);
+
             const filtered = try flattened.filter(factory);
-            const folded = try filtered.constantFold(factory);
-            const collected = try folded.collectLikeTerms(factory);
+            if (filtered.list.items.len < 2)
+                return try expFromOperands(filtered).simplify(factory);
+
+            const collected = try filtered.collectLikeTerms(factory);
+            const folded = try collected.constantFold(factory);
             
-            return expFromOperands(collected);
+            return expFromOperands(folded);
         }
 
         pub fn eqlStructure(self: Self, exp: Expression(T)) bool {

@@ -74,8 +74,8 @@ pub fn Log(comptime T: type) type {
         }
 
         pub fn simplify(self: Self, factory: Factory(T)) !Expression(T) {
-            const simple_b = try self.b.*.rewrite(factory);
-            const simple_x = try self.x.*.rewrite(factory);
+            const simple_b = try self.b.*.simplify(factory);
+            const simple_x = try self.x.*.simplify(factory);
 
             return if (
                 (simple_b.eqlStructure(.constant(0))) or

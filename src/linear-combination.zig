@@ -31,11 +31,8 @@ pub fn LinearCombination(
             operands: []Expression(T),
             factory: Factory(T)
         ) ![]Expression(T) {
-            for (operands, 0..) |exp, i| {
-                // (try exp.rewrite(factory)).print();
-                // std.debug.print(" , {d}, {}\n", .{ i, std.meta.activeTag(try exp.rewrite(factory)) });
-                _ = i;
-                try self.insert(try exp.rewrite(factory), factory);
+            for (operands) |exp| {
+                try self.insert(exp, factory);
             }
             return try self.toSlice(factory);
         }

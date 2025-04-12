@@ -20,8 +20,10 @@ pub fn Mul(comptime T: type) type {
 
             pub const LinearCombinator = LinearCombination(T, struct {
                 pub fn addToTerm(t: *linear_combination.Term(T), exp: Expression(T), factory: Factory(T)) !void {
-                    const new_value = try factory.add(&.{ t.value, exp.Pow.exponent.* });
-                    t.value = try new_value.rewrite(factory);
+                    const exp_as_pow = try exp.asPow(factory);
+                    const exponent = exp_as_pow.Pow.exponent.*;
+                    const new_value = try factory.add(&.{ t.value, exponent });
+                    t.value = try new_value.simplify(factory);
                 }
 
                 pub fn isMatch(term: linear_combination.Term(T), exp: Expression(T)) bool {
@@ -33,7 +35,7 @@ pub fn Mul(comptime T: type) type {
                     return try Expression(T).pow(
                         try factory.create(term.key),
                         try factory.create(term.value)
-                    ).rewrite(factory);
+                    ).simplify(factory);
                 }
 
                 pub fn termFromExpression(exp: Expression(T), factory: Factory(T)) !linear_combination.Term(T) {
@@ -78,24 +80,24 @@ pub fn Mul(comptime T: type) type {
 
         pub fn expFromOperands(operands: MulOperands) Expression(T) {
             return switch (operands.list.items.len) {
-                0 => .constant(0),
+                0 => .constant(1),
                 1 => operands.list.items[0],
                 else => .mul(operands)
             };
         }
 
-        pub fn filter(self: Self, factory: Factory(T)) !Expression(T) {
-            const filtered = try self.operands.filter(factory);
-            return expFromOperands(filtered);
-        }
-
         pub fn simplify(self: Self, factory: Factory(T)) !Expression(T) {
-            const filtered = try self.filter(factory);
-            if (filtered == .Mul)  {
-                const as_pow = try filtered.asPow(factory);
-                const collected = try as_pow.Mul.operands.collectLikeTerms(factory);
-                return expFromOperands(collected);
-            } else return try filtered.rewrite(factory);
+            const flattened = try self.operands.flatten(.Mul, factory);
+
+            const filtered = try flattened.filter(factory);
+            if (filtered.list.items.len < 2)
+                return try expFromOperands(filtered).simplify(factory);
+
+            const as_pow = try filtered.asPow(factory);
+            const collected = try as_pow.collectLikeTerms(factory);
+            const folded = try collected.constantFold(factory);
+
+            return expFromOperands(folded);
         }
 
         pub fn eqlStructure(self: Self, exp: Expression(T)) bool {

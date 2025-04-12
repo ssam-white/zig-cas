@@ -35,7 +35,7 @@ pub fn Operands(
         pub fn filter(self: Self, factory: Factory(T)) !Self {
             var new_operands = Self.init(factory.allocator);
             for (self.list.items) |exp| {
-                const simple_exp = try exp.rewrite(factory);
+                const simple_exp = try exp.simplify(factory);
                 if (simple_exp.eqlStructure(
                     .constant(Context.identity)
                 )) {
@@ -111,13 +111,25 @@ pub fn Operands(
             return new_operands;
         }
 
-        pub fn rewriteChildren(self: Self, factory: Factory(T)) !Self {
-            var new_operands = Self.init(factory.allocator);
-            for (self.list.items) |exp| {
-                const rewritten = try exp.rewrite(factory);
-                try new_operands.append(rewritten);
-            }
-            return new_operands;
+        pub fn flattenAndFold(
+            self: Self,
+            comptime tag: Expression(T).Tag,
+            factory: Factory(T)
+        ) !Self {
+            const flattened = try self.flatten(tag, factory);
+            return try flattened.constantFold(factory);
+        }
+
+        pub fn simplifyChildren(self: Self, factory: Factory(T)) !Self {
+            const flattened = try self.flatten(Context.tag, factory);
+
+            const filtered = try flattened.filter(factory);
+            if (filtered.list.items.len < 2) return filtered;
+
+            const as_pow = try filtered.operands.asPow(factory);
+            const collected = try as_pow.collectLikeTerms(factory);
+            const folded = try collected.constantFold(factory);
+            return Context.expFromOperands(folded);
         }
 
         pub fn constantFold(self: Self, factory: Factory(T)) !Self {

@@ -14,10 +14,23 @@ pub fn main() !void {
     const f: Factory(f32) = try .init(alloc);
     defer f.deinit();
 
-    const b: E = try f.add(&.{
-        .variable("x"),
-        .variable("x"),
-        // .variable("x"),
+    const b: E = try f.mul(&.{
+        try f.mul(&.{
+            .constant(3),
+            .constant(3),
+        }),
+        try f.mul(&.{
+            .constant(3),
+            .constant(3),
+        }),
+        try f.mul(&.{
+            .constant(2),
+            .constant(2),
+        }),
+        try f.mul(&.{
+            .constant(2),
+            .constant(2),
+        }),
     });
 
     b.print();

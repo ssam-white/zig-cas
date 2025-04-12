@@ -78,8 +78,8 @@ pub fn Pow(comptime T: type) type {
         }
 
         pub fn simplify(self: Self, factory: Factory(T)) !Expression(T) {
-            const simple_b = try self.base.*.rewrite(factory);
-            const simple_e = try self.exponent.*.rewrite(factory);
+            const simple_b = try self.base.*.simplify(factory);
+            const simple_e = try self.exponent.*.simplify(factory);
 
             return if (
                 simple_b.eqlStructure(.constant(1)) or
@@ -133,7 +133,7 @@ test "power rule of differentiation" {
 
 }
 
-test "rewrite x^0 == 1" {
+test "simplify x^0 == 1" {
     const f = try Factory(f32).init(std.testing.allocator);
     defer f.deinit();
 
@@ -141,14 +141,14 @@ test "rewrite x^0 == 1" {
         try f.variablePtr("x"),
         try f.constantPtr(0),
     );
-    const r_exp = exp.rewrite(f);
+    const r_exp = exp.simplify(f);
 
     const expected = Expression(f32).constant(1);
 
     try std.testing.expectEqual(r_exp, expected);
 }
 
-test "rewrite x^1==x" {
+test "simplify x^1==x" {
     const factory = try Factory(f32).init(std.testing.allocator);
     defer factory.deinit();
 
@@ -157,7 +157,7 @@ test "rewrite x^1==x" {
         try factory.constantPtr(1)
     );
 
-    const r_exp = try exp.rewrite(factory);
+    const r_exp = try exp.simplify(factory);
     const expected = Expression(f32).variable("x");
 
     const is_eql = r_exp.eqlStructure(expected);
@@ -165,7 +165,7 @@ test "rewrite x^1==x" {
     try std.testing.expect(is_eql);
 }
 
-test "rewrite 0^x == 0" {
+test "simplify 0^x == 0" {
     const factory = try Factory(f32).init(std.testing.allocator);
     defer factory.deinit();
 
@@ -174,7 +174,7 @@ test "rewrite 0^x == 0" {
         try factory.variablePtr("x")
     );
 
-    const r_exp = try exp.rewrite(factory);
+    const r_exp = try exp.simplify(factory);
     const expected = Expression(f32).constant(0);
     const is_eql = r_exp.eqlStructure(expected);
 
@@ -182,7 +182,7 @@ test "rewrite 0^x == 0" {
 }
 
 
-test "rewrite 1^x == 1" {
+test "simplify 1^x == 1" {
     const factory = try Factory(f32).init(std.testing.allocator);
     defer factory.deinit();
 
@@ -191,7 +191,7 @@ test "rewrite 1^x == 1" {
         try factory.variablePtr("x")
     );
 
-    const r_exp = try exp.rewrite(factory);
+    const r_exp = try exp.simplify(factory);
     const expected = Expression(f32).constant(1);
     const is_eql = r_exp.eqlStructure(expected);
 

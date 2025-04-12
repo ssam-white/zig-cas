@@ -19,8 +19,10 @@ pub fn Sub(comptime T: type) type {
             }
 
             pub const LinearCombinator = LinearCombination(T, struct {
-                pub fn addToTerm(t: *linear_combination.Term(T), _: Expression(T), factory: Factory(T)) !void {
-                    t.value = try factory.sub(&.{ t.value, .constant(1) });
+                pub fn addToTerm(term: *linear_combination.Term(T), _: Expression(T), factory: Factory(T)) !void {
+                    const new_value = try factory.sub(&.{ term.value, .constant(1) });
+                    const flat_and_fold = try new_value.Sub.operands.flattenAndFold(.Add, factory);
+                    term.value = .sub(flat_and_fold);
                 }
 
                 pub fn isMatch(term: linear_combination.Term(T), exp: Expression(T)) bool {
@@ -28,7 +30,8 @@ pub fn Sub(comptime T: type) type {
                 }
 
                 pub fn termToExpression(term: linear_combination.Term(T), factory: Factory(T)) !Expression(T) {
-                    return try factory.mul(&.{ term.value, term.key });
+                    const prod = try factory.mul(&.{ term.value, term.key });
+                    return try prod.simplify(factory);
                 }
 
                 pub fn termFromExpression(exp: Expression(T), _: Factory(T)) !linear_combination.Term(T) {
