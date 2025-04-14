@@ -30,7 +30,7 @@ pub fn Add(comptime T: type) type {
                 }
 
                 pub fn termToExpression(term: linear_combination.Term(T), factory: Factory(T)) !Expression(T) {
-                    const prod = try factory.mul(&.{ term.value, term.key });
+                    const prod = try factory.mul(&.{ term.value, term.key});
                     return prod.simplify(factory);
                 }
 

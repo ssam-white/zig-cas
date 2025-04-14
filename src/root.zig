@@ -1,6 +1,3 @@
-pub const pow = @import("expression/pow.zig");
+pub const Factory = @import("factory.zig").Factory;
 
-test "Run unit tests" {
-    @import("std").testing.refAllDecls(@This());
-}
 

@@ -36,11 +36,11 @@ pub fn Operands(
             var new_operands = Self.init(factory.allocator);
             for (self.list.items) |exp| {
                 const simple_exp = try exp.simplify(factory);
+
                 if (simple_exp.eqlStructure(
                     .constant(Context.identity)
-                )) {
-                    continue;
-                }
+                )) continue;
+
                 try new_operands.append(simple_exp);
             }
             return new_operands;

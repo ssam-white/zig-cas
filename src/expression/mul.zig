@@ -97,7 +97,10 @@ pub fn Mul(comptime T: type) type {
             const collected = try as_pow.collectLikeTerms(factory);
             const folded = try collected.constantFold(factory);
 
-            return expFromOperands(folded);
+            const simplified = expFromOperands(folded);
+            return if (simplified.isAnnihilated())
+                .constant(0)
+            else simplified;
         }
 
         pub fn eqlStructure(self: Self, exp: Expression(T)) bool {

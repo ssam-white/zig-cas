@@ -15,26 +15,16 @@ pub fn main() !void {
     defer f.deinit();
 
     const b: E = try f.mul(&.{
-        try f.mul(&.{
-            .constant(3),
-            .constant(3),
-        }),
-        try f.mul(&.{
-            .constant(3),
-            .constant(3),
-        }),
-        try f.mul(&.{
-            .constant(2),
-            .constant(2),
-        }),
-        try f.mul(&.{
-            .constant(2),
-            .constant(2),
-        }),
+        .constant(0),
+        .variable("x"),
+        .variable("x")
     });
 
     b.print();
     std.debug.print("\n= ", .{});
+    // const bd = try b.d("x", f);
+    // bd.print();
+    // std.debug.print("\n= ", .{});
     const br = try b.simplify(f);
     br.print();
     std.debug.print("\n", .{});

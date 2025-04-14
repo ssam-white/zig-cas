@@ -101,5 +101,14 @@ pub fn Expression(comptime T: type) type {
                 inline else => |e| e.constantFold(factory) catch Errors.ConstantFoldError
             };
         }
+
+        pub fn isAnnihilated(self: Self) bool {
+            if (self != .Mul) return true;
+            
+            for (self.Mul.operands.list.items) |e| {
+                if (e.eqlStructure(.constant(0))) return true;
+            }
+            return false;
+        }
     };
 }
